@@ -1,93 +1,129 @@
 import React from 'react'
-import { calcParking } from '../utils/parkingCalc.js'
+import { calcMixedUse } from '../utils/parkingCalc.js'
 
-function getMainTotal(result) {
-  if (result.typology === 'school') {
-    return result.grandTotal
-  }
-  return result.total
+var RESIDENTIAL_SLAB_LABELS = ['Up to 45 sq.m', '45 to 60 sq.m', '60 to 90 sq.m', 'Above 90 sq.m']
+
+function typologyDisplayName(typology) {
+  if (typology === 'residential') return 'Residential (Table 21, Sr. 1(i))'
+  if (typology === 'shopping_convenience') return 'Shopping / Convenience (Table 21, Sr. 10)'
+  if (typology === 'mercantile') return 'Mercantile (Table 21, Sr. 5)'
+  if (typology === 'office') return 'Office / Commercial (Table 21, Sr. 4)'
+  if (typology === 'school') return 'School / Educational (Table 21, Sr. 2/3)'
+  return typology
 }
 
-function getStats(result) {
-  if (result.typology === 'residential') {
-    return [
-      { label: 'SUB-TOTAL', value: result.subTotal },
-      { label: 'VISITOR', value: result.visitor },
-      { label: 'TWO-WHEELER (OPT)', value: result.twoWheelerOptional }
-    ]
-  }
-  if (result.typology === 'shopping_convenience') {
-    return [
-      { label: 'CARS', value: result.cars },
-      { label: 'VISITOR', value: result.visitor },
-      { label: 'TRANSPORT VEH', value: result.transportVehicle }
-    ]
-  }
-  if (result.typology === 'mercantile' || result.typology === 'office') {
-    return [
-      { label: 'SUB-TOTAL', value: result.subTotal },
-      { label: 'VISITOR', value: result.visitor },
-      { label: 'TRANSPORT VEH', value: result.transportVehicle }
-    ]
-  }
-  if (result.typology === 'school') {
-    return [
-      { label: 'ADMIN', value: result.admin.total },
-      { label: 'ASSEMBLY', value: result.assembly.total },
-      { label: 'CANTEEN', value: result.canteen.total }
-    ]
-  }
-  return []
-}
-
-function getBreakdownRows(result) {
-  var rows = []
+// Normalizes each typology's result shape into a uniform
+// { name, slabs: [{label, area, rate, cars}], subTotal, visitor, total }
+// for the Section 10 COMPONENT / AREA / RATE / CARS breakdown table.
+function normalizeComponent(result) {
+  var name = typologyDisplayName(result.typology)
   var i
 
   if (result.typology === 'residential') {
+    var slabs = []
     for (i = 0; i < result.slabs.length; i = i + 1) {
-      rows.push({ label: result.slabs[i].label, detail: result.slabs[i].count + ' tenements', cars: result.slabs[i].cars })
+      slabs.push({
+        label: RESIDENTIAL_SLAB_LABELS[i],
+        area: result.slabs[i].count + ' tenements',
+        rate: '1 / ' + result.slabs[i].perN,
+        cars: result.slabs[i].cars
+      })
     }
-  } else if (result.typology === 'shopping_convenience') {
-    rows.push({ label: result.shopSizeCategory, detail: result.area + ' sq.m @ 1/' + result.ratePerSqm, cars: result.cars })
-  } else if (result.typology === 'mercantile' || result.typology === 'office') {
+    return { name: name, slabs: slabs, subTotal: result.subTotal, visitor: result.visitor, total: result.total }
+  }
+
+  if (result.typology === 'shopping_convenience') {
+    var shopSlabs = []
+    for (i = 0; i < result.slabs.length; i = i + 1) {
+      var slabLabel = result.slabs[i].label === 'upto_20sqm' ? 'Shops ≤ 20 sq.m' : 'Shops > 20 sq.m'
+      shopSlabs.push({
+        label: slabLabel,
+        area: result.slabs[i].area + ' sq.m',
+        rate: '1 / ' + result.slabs[i].rate + ' sq.m',
+        cars: result.slabs[i].cars
+      })
+    }
+    return { name: name, slabs: shopSlabs, subTotal: result.cars, visitor: result.visitor, total: result.total }
+  }
+
+  if (result.typology === 'mercantile' || result.typology === 'office') {
     if (result.nil === true) {
-      rows.push({ label: 'NIL exemption', detail: result.area + ' sq.m ≤ 50 sq.m', cars: 0 })
-    } else {
-      for (i = 0; i < result.slabs.length; i = i + 1) {
-        rows.push({ label: result.slabs[i].label, detail: result.slabs[i].area + ' sq.m', cars: result.slabs[i].cars })
+      return {
+        name: name,
+        slabs: [{ label: 'NIL exemption', area: result.area + ' sq.m', rate: '≤ 50 sq.m', cars: 0 }],
+        subTotal: 0,
+        visitor: 0,
+        total: 0
       }
     }
-  } else if (result.typology === 'school') {
-    rows.push({ label: 'Admin', detail: result.admin.area + ' sq.m', cars: result.admin.cars })
+    var boundaryLabels = result.typology === 'mercantile' ? ['Up to 800 sq.m', 'Above 800 sq.m'] : ['Up to 1500 sq.m', 'Above 1500 sq.m']
+    var slabs2 = []
+    for (i = 0; i < result.slabs.length; i = i + 1) {
+      if (result.slabs[i].area > 0) {
+        slabs2.push({
+          label: boundaryLabels[i],
+          area: result.slabs[i].area + ' sq.m',
+          rate: '1 / ' + result.slabs[i].rate + ' sq.m',
+          cars: result.slabs[i].cars
+        })
+      }
+    }
+    return { name: name, slabs: slabs2, subTotal: result.subTotal, visitor: result.visitor, total: result.total }
+  }
+
+  if (result.typology === 'school') {
+    var schoolSlabs = []
+    schoolSlabs.push({
+      label: 'Admin / Public Service',
+      area: result.admin.area + ' sq.m',
+      rate: '1 / 35 sq.m',
+      cars: result.admin.cars
+    })
     if (result.assembly.type !== 'none') {
-      rows.push({ label: 'Assembly', detail: String(result.assembly.value), cars: result.assembly.cars })
+      var assemblyUnit = result.assembly.type === 'fixed' ? ' seats' : ' sq.m'
+      var assemblyRate = result.assembly.type === 'fixed' ? '1 / 12 seats' : '1 / 15 sq.m'
+      schoolSlabs.push({
+        label: 'Assembly Hall',
+        area: result.assembly.value + assemblyUnit,
+        rate: assemblyRate,
+        cars: result.assembly.cars
+      })
     }
     if (result.canteen.area > 0) {
       if (result.canteen.nil === true) {
-        rows.push({ label: 'Canteen', detail: result.canteen.area + ' sq.m ≤ 50 sq.m', cars: 0 })
+        schoolSlabs.push({ label: 'Canteen / Tiffin Room', area: result.canteen.area + ' sq.m', rate: 'NIL ≤ 50 sq.m', cars: 0 })
       } else {
-        rows.push({ label: 'Canteen', detail: result.canteen.area + ' sq.m', cars: result.canteen.subTotal })
+        schoolSlabs.push({ label: 'Canteen / Tiffin Room', area: result.canteen.area + ' sq.m', rate: '1/40, 1/80', cars: result.canteen.subTotal })
       }
     }
+    var schoolSubTotal = result.admin.cars + result.assembly.cars + result.canteen.subTotal
+    var schoolVisitor = result.admin.visitor + result.assembly.visitor + result.canteen.visitor
+    return { name: name, slabs: schoolSlabs, subTotal: schoolSubTotal, visitor: schoolVisitor, total: result.grandTotal }
   }
 
-  return rows
-}
-
-function getStatColStyle(index) {
-  return {
-    flex: 1,
-    textAlign: 'center',
-    padding: '0 8px',
-    borderLeft: index > 0 ? '1px solid #2D5A3D' : 'none'
-  }
+  return { name: name, slabs: [], subTotal: 0, visitor: 0, total: 0 }
 }
 
 function Parking() {
-  var typologyState = React.useState('residential')
-  var typology = typologyState[0]
-  var setTypology = typologyState[1]
+  var residentialCheckedState = React.useState(false)
+  var residentialChecked = residentialCheckedState[0]
+  var setResidentialChecked = residentialCheckedState[1]
+
+  var shoppingCheckedState = React.useState(false)
+  var shoppingChecked = shoppingCheckedState[0]
+  var setShoppingChecked = shoppingCheckedState[1]
+
+  var mercantileCheckedState = React.useState(false)
+  var mercantileChecked = mercantileCheckedState[0]
+  var setMercantileChecked = mercantileCheckedState[1]
+
+  var officeCheckedState = React.useState(false)
+  var officeChecked = officeCheckedState[0]
+  var setOfficeChecked = officeCheckedState[1]
+
+  var schoolCheckedState = React.useState(false)
+  var schoolChecked = schoolCheckedState[0]
+  var setSchoolChecked = schoolCheckedState[1]
 
   var devTypeState = React.useState('new')
   var devType = devTypeState[0]
@@ -109,13 +145,13 @@ function Parking() {
   var above90 = above90State[0]
   var setAbove90 = above90State[1]
 
-  var shopAreaState = React.useState('')
-  var shopArea = shopAreaState[0]
-  var setShopArea = shopAreaState[1]
+  var shopAreaUpto20State = React.useState('')
+  var shopAreaUpto20 = shopAreaUpto20State[0]
+  var setShopAreaUpto20 = shopAreaUpto20State[1]
 
-  var shopSizeCategoryState = React.useState('above_20sqm')
-  var shopSizeCategory = shopSizeCategoryState[0]
-  var setShopSizeCategory = shopSizeCategoryState[1]
+  var shopAreaAbove20State = React.useState('')
+  var shopAreaAbove20 = shopAreaAbove20State[0]
+  var setShopAreaAbove20 = shopAreaAbove20State[1]
 
   var mercantileAreaState = React.useState('')
   var mercantileArea = mercantileAreaState[0]
@@ -157,54 +193,73 @@ function Parking() {
   var result = resultState[0]
   var setResult = resultState[1]
 
-  function handleTypologyChange(e) {
-    setTypology(e.target.value)
-    setResult(null)
-  }
-
   function handleCalculate() {
-    var inputs = null
+    var components = []
 
-    if (typology === 'residential') {
-      inputs = {
-        slabCounts: {
-          upto45: Number(upto45),
-          to60: Number(to60),
-          to90: Number(to90),
-          above90: Number(above90)
-        },
-        devType: devType
-      }
-    } else if (typology === 'shopping_convenience') {
-      inputs = {
-        totalArea: Number(shopArea),
-        shopSizeCategory: shopSizeCategory
-      }
-    } else if (typology === 'mercantile') {
-      inputs = {
-        area: Number(mercantileArea)
-      }
-    } else if (typology === 'office') {
-      inputs = {
-        area: Number(officeArea)
-      }
-    } else if (typology === 'school') {
+    if (residentialChecked) {
+      components.push({
+        typology: 'residential',
+        inputs: {
+          slabCounts: {
+            upto45: Number(upto45),
+            to60: Number(to60),
+            to90: Number(to90),
+            above90: Number(above90)
+          },
+          devType: devType
+        }
+      })
+    }
+
+    if (shoppingChecked) {
+      components.push({
+        typology: 'shopping_convenience',
+        inputs: {
+          areaUpto20: Number(shopAreaUpto20),
+          areaAbove20: Number(shopAreaAbove20)
+        }
+      })
+    }
+
+    if (mercantileChecked) {
+      components.push({
+        typology: 'mercantile',
+        inputs: { area: Number(mercantileArea) }
+      })
+    }
+
+    if (officeChecked) {
+      components.push({
+        typology: 'office',
+        inputs: { area: Number(officeArea) }
+      })
+    }
+
+    if (schoolChecked) {
       var resolvedAssemblyType = 'none'
       var resolvedAssemblyValue = 0
       if (assemblyPresent === 'yes') {
         resolvedAssemblyType = assemblySeatType
         resolvedAssemblyValue = assemblySeatType === 'fixed' ? Number(assemblySeats) : Number(assemblyFloorArea)
       }
-      inputs = {
-        adminArea: Number(adminArea),
-        assemblyType: resolvedAssemblyType,
-        assemblyValue: resolvedAssemblyValue,
-        canteenArea: canteenPresent === 'yes' ? Number(canteenArea) : 0
-      }
+      components.push({
+        typology: 'school',
+        inputs: {
+          adminArea: Number(adminArea),
+          assemblyType: resolvedAssemblyType,
+          assemblyValue: resolvedAssemblyValue,
+          canteenArea: canteenPresent === 'yes' ? Number(canteenArea) : 0
+        }
+      })
     }
 
-    var calcResult = calcParking(typology, inputs)
-    setResult(calcResult)
+    if (components.length === 0) {
+      setResult(null)
+      return
+    }
+
+    var mixedResult = calcMixedUse(components)
+    setResult(mixedResult)
   }
 
   var headingStyle = {
@@ -243,7 +298,7 @@ function Parking() {
     backgroundColor: '#1E2820',
     borderRadius: '8px',
     padding: '20px 24px',
-    minWidth: '280px',
+    minWidth: '320px',
     flex: 1,
     fontFamily: 'system-ui'
   }
@@ -283,6 +338,29 @@ function Parking() {
     fontFamily: 'system-ui',
     width: '100%',
     boxSizing: 'border-box'
+  }
+
+  var checkboxLabelStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginTop: '8px',
+    fontSize: '14px',
+    color: '#1E2820',
+    fontFamily: 'system-ui'
+  }
+
+  var typologyBlockStyle = {
+    marginTop: '16px',
+    paddingTop: '12px',
+    borderTop: '0.5px solid #E2DDD5'
+  }
+
+  var typologyTitleStyle = {
+    fontSize: '15px',
+    fontWeight: 500,
+    color: '#1E2820',
+    marginBottom: '4px'
   }
 
   var basisLineStyle = {
@@ -346,55 +424,93 @@ function Parking() {
     marginBottom: '20px'
   }
 
-  var statsRowStyle = {
+  var colHeaderRowStyle = {
     display: 'flex',
     flexDirection: 'row',
-    borderTop: '1px solid #2D5A3D',
-    borderBottom: '1px solid #2D5A3D',
-    padding: '12px 0',
-    marginBottom: '16px'
-  }
-
-  var statNumberStyle = {
-    fontSize: '18px',
-    fontWeight: 500,
-    color: '#FFFFFF'
-  }
-
-  var statLabelStyle = {
     fontSize: '10px',
-    fontWeight: 400,
     color: '#9BB5BF',
+    textTransform: 'uppercase',
+    borderBottom: '1px solid #2D5A3D',
+    paddingBottom: '6px',
+    marginBottom: '4px'
+  }
+
+  var colComponentStyle = {
+    flex: 2
+  }
+
+  var colAreaStyle = {
+    flex: 1,
+    textAlign: 'right'
+  }
+
+  var colRateStyle = {
+    flex: 1,
+    textAlign: 'right'
+  }
+
+  var colCarsStyle = {
+    flex: 1,
+    textAlign: 'right'
+  }
+
+  var componentBlockStyle = {
+    marginBottom: '12px'
+  }
+
+  var componentNameRowStyle = {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#F5F0E8',
+    padding: '8px 0 4px 0'
+  }
+
+  var slabRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    fontSize: '12px',
+    color: '#9BB5BF',
+    padding: '4px 0',
+    paddingLeft: '12px'
+  }
+
+  var subRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    fontSize: '12px',
+    color: '#9BB5BF',
+    padding: '4px 0',
+    paddingLeft: '12px'
+  }
+
+  var componentTotalRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    fontSize: '13px',
+    color: '#FFFFFF',
+    padding: '6px 0',
+    paddingLeft: '12px',
+    borderTop: '1px solid #2D5A3D',
     marginTop: '2px'
   }
 
-  var breakdownRowStyle = {
+  var footerDividerStyle = {
+    borderTop: '1px solid #2D5A3D',
+    margin: '12px 0'
+  }
+
+  var footerRowStyle = {
     display: 'flex',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    fontSize: '12px',
-    color: '#9BB5BF',
-    padding: '6px 0',
-    borderBottom: '1px solid #2D5A3D'
-  }
-
-  var breakdownLabelStyle = {
-    color: '#F5F0E8',
-    flex: 1
-  }
-
-  var breakdownDetailStyle = {
-    color: '#9BB5BF',
-    flex: 1,
-    textAlign: 'center'
-  }
-
-  var breakdownCarsStyle = {
+    fontSize: '13px',
     color: '#FFFFFF',
-    fontWeight: 500,
-    flex: 0,
-    minWidth: '40px',
-    textAlign: 'right'
+    padding: '6px 0'
+  }
+
+  var regulationLineStyle = {
+    fontSize: '11px',
+    color: '#9BB5BF',
+    marginTop: '4px'
   }
 
   var emptyStateStyle = {
@@ -410,17 +526,31 @@ function Parking() {
 
       <div style={panelRowStyle}>
         <div style={inputsPanelStyle}>
-          <div style={sectionLabelStyle}>Typology</div>
-          <select style={selectStyle} value={typology} onChange={handleTypologyChange}>
-            <option value="residential">Residential</option>
-            <option value="shopping_convenience">Shopping / Convenience</option>
-            <option value="mercantile">Mercantile</option>
-            <option value="office">Office / Commercial</option>
-            <option value="school">School / Educational</option>
-          </select>
+          <div style={sectionLabelStyle}>Typologies (select one or more)</div>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={residentialChecked} onChange={function (e) { setResidentialChecked(e.target.checked) }} />
+            Residential
+          </label>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={shoppingChecked} onChange={function (e) { setShoppingChecked(e.target.checked) }} />
+            Shopping / Convenience
+          </label>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={mercantileChecked} onChange={function (e) { setMercantileChecked(e.target.checked) }} />
+            Mercantile
+          </label>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={officeChecked} onChange={function (e) { setOfficeChecked(e.target.checked) }} />
+            Office / Commercial
+          </label>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={schoolChecked} onChange={function (e) { setSchoolChecked(e.target.checked) }} />
+            School / Educational
+          </label>
 
-          {typology === 'residential' ? (
-            <div>
+          {residentialChecked ? (
+            <div style={typologyBlockStyle}>
+              <div style={typologyTitleStyle}>Residential</div>
               <div style={fieldGroupStyle}>
                 <div style={sectionLabelStyle}>Development Type</div>
                 <select style={selectStyle} value={devType} onChange={function (e) { setDevType(e.target.value) }}>
@@ -447,38 +577,43 @@ function Parking() {
             </div>
           ) : null}
 
-          {typology === 'shopping_convenience' ? (
-            <div>
+          {shoppingChecked ? (
+            <div style={typologyBlockStyle}>
+              <div style={typologyTitleStyle}>Shopping / Convenience</div>
               <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Total Shopping Built-up Area (sq.m)</div>
-                <input style={inputStyle} type="number" value={shopArea} onChange={function (e) { setShopArea(e.target.value) }} />
+                <div style={sectionLabelStyle}>Area of Shops &le; 20 sq.m (optional)</div>
+                <input style={inputStyle} type="number" value={shopAreaUpto20} onChange={function (e) { setShopAreaUpto20(e.target.value) }} />
               </div>
               <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Predominant Shop Size</div>
-                <select style={selectStyle} value={shopSizeCategory} onChange={function (e) { setShopSizeCategory(e.target.value) }}>
-                  <option value="upto_20sqm">Up to 20 sq.m</option>
-                  <option value="above_20sqm">Above 20 sq.m</option>
-                </select>
+                <div style={sectionLabelStyle}>Area of Shops &gt; 20 sq.m (optional)</div>
+                <input style={inputStyle} type="number" value={shopAreaAbove20} onChange={function (e) { setShopAreaAbove20(e.target.value) }} />
               </div>
             </div>
           ) : null}
 
-          {typology === 'mercantile' ? (
-            <div style={fieldGroupStyle}>
-              <div style={sectionLabelStyle}>Total Built-up Area (sq.m)</div>
-              <input style={inputStyle} type="number" value={mercantileArea} onChange={function (e) { setMercantileArea(e.target.value) }} />
+          {mercantileChecked ? (
+            <div style={typologyBlockStyle}>
+              <div style={typologyTitleStyle}>Mercantile</div>
+              <div style={fieldGroupStyle}>
+                <div style={sectionLabelStyle}>Total Built-up Area (sq.m)</div>
+                <input style={inputStyle} type="number" value={mercantileArea} onChange={function (e) { setMercantileArea(e.target.value) }} />
+              </div>
             </div>
           ) : null}
 
-          {typology === 'office' ? (
-            <div style={fieldGroupStyle}>
-              <div style={sectionLabelStyle}>Total Office Built-up Area (sq.m)</div>
-              <input style={inputStyle} type="number" value={officeArea} onChange={function (e) { setOfficeArea(e.target.value) }} />
+          {officeChecked ? (
+            <div style={typologyBlockStyle}>
+              <div style={typologyTitleStyle}>Office / Commercial</div>
+              <div style={fieldGroupStyle}>
+                <div style={sectionLabelStyle}>Total Office Built-up Area (sq.m)</div>
+                <input style={inputStyle} type="number" value={officeArea} onChange={function (e) { setOfficeArea(e.target.value) }} />
+              </div>
             </div>
           ) : null}
 
-          {typology === 'school' ? (
-            <div>
+          {schoolChecked ? (
+            <div style={typologyBlockStyle}>
+              <div style={typologyTitleStyle}>School / Educational</div>
               <div style={fieldGroupStyle}>
                 <div style={sectionLabelStyle}>Admin / Public Service Area (sq.m)</div>
                 <input style={inputStyle} type="number" value={adminArea} onChange={function (e) { setAdminArea(e.target.value) }} />
@@ -542,35 +677,80 @@ function Parking() {
         <div style={resultsPanelStyle}>
           {result ? (
             <div>
-              <div style={regTagStyle}>{result.regulation}</div>
-              <div style={resultNumberStyle}>{getMainTotal(result)}</div>
-              <div style={resultUnitStyle}>cars</div>
+              <div style={regTagStyle}>Table 21</div>
+              <div style={resultNumberStyle}>{result.grandTotal}</div>
+              <div style={resultUnitStyle}>total cars</div>
 
-              <div style={statsRowStyle}>
-                {getStats(result).map(function (stat, index) {
-                  return (
-                    <div key={stat.label} style={getStatColStyle(index)}>
-                      <div style={statNumberStyle}>{stat.value}</div>
-                      <div style={statLabelStyle}>{stat.label}</div>
-                    </div>
-                  )
-                })}
+              <div style={colHeaderRowStyle}>
+                <div style={colComponentStyle}>Component</div>
+                <div style={colAreaStyle}>Area</div>
+                <div style={colRateStyle}>Rate</div>
+                <div style={colCarsStyle}>Cars</div>
               </div>
 
-              <div>
-                {getBreakdownRows(result).map(function (row, index) {
-                  return (
-                    <div key={index} style={breakdownRowStyle}>
-                      <span style={breakdownLabelStyle}>{row.label}</span>
-                      <span style={breakdownDetailStyle}>{row.detail}</span>
-                      <span style={breakdownCarsStyle}>{row.cars}</span>
+              {result.components.map(function (comp, idx) {
+                var norm = normalizeComponent(comp)
+                return (
+                  <div key={idx} style={componentBlockStyle}>
+                    <div style={componentNameRowStyle}>{norm.name}</div>
+                    {norm.slabs.map(function (slab, sIdx) {
+                      return (
+                        <div key={sIdx} style={slabRowStyle}>
+                          <div style={colComponentStyle}>{slab.label}</div>
+                          <div style={colAreaStyle}>{slab.area}</div>
+                          <div style={colRateStyle}>{slab.rate}</div>
+                          <div style={colCarsStyle}>{slab.cars}</div>
+                        </div>
+                      )
+                    })}
+                    <div style={subRowStyle}>
+                      <div style={colComponentStyle}>Sub-total</div>
+                      <div style={colAreaStyle}></div>
+                      <div style={colRateStyle}></div>
+                      <div style={colCarsStyle}>{norm.subTotal}</div>
                     </div>
-                  )
-                })}
+                    <div style={subRowStyle}>
+                      <div style={colComponentStyle}>Visitor (10%)</div>
+                      <div style={colAreaStyle}></div>
+                      <div style={colRateStyle}></div>
+                      <div style={colCarsStyle}>{norm.visitor}</div>
+                    </div>
+                    <div style={componentTotalRowStyle}>
+                      <div style={colComponentStyle}><strong>Component Total</strong></div>
+                      <div style={colAreaStyle}></div>
+                      <div style={colRateStyle}></div>
+                      <div style={colCarsStyle}><strong>{norm.total}</strong></div>
+                    </div>
+                  </div>
+                )
+              })}
+
+              <div style={footerDividerStyle}></div>
+
+              <div style={footerRowStyle}>
+                <div style={colComponentStyle}><strong>TOTAL CAR PARKING REQUIRED</strong></div>
+                <div style={colAreaStyle}></div>
+                <div style={colRateStyle}></div>
+                <div style={colCarsStyle}><strong>{result.grandTotal}</strong></div>
               </div>
+              <div style={footerRowStyle}>
+                <div style={colComponentStyle}>TWO-WHEELER PARKING (optional &mdash; if proposed)</div>
+                <div style={colAreaStyle}></div>
+                <div style={colRateStyle}></div>
+                <div style={colCarsStyle}>{result.twoWheelerOptional}</div>
+              </div>
+              <div style={footerRowStyle}>
+                <div style={colComponentStyle}>TRANSPORT VEHICLES</div>
+                <div style={colAreaStyle}></div>
+                <div style={colRateStyle}></div>
+                <div style={colCarsStyle}>{result.transportVehicle}</div>
+              </div>
+
+              <div style={footerDividerStyle}></div>
+              <div style={regulationLineStyle}>REGULATION: Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
             </div>
           ) : (
-            <div style={emptyStateStyle}>Enter inputs and calculate to see results</div>
+            <div style={emptyStateStyle}>Select at least one typology, enter inputs and calculate to see results</div>
           )}
         </div>
       </div>
