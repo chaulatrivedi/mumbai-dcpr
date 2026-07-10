@@ -45,10 +45,10 @@ export function calcResidential(slabCounts, devType) {
     regulation: rates.regulation,
     devType: devType,
     slabs: [
-      { label: slabs[0].label, count: slabCounts.upto45, cars: upto45Cars },
-      { label: slabs[1].label, count: slabCounts.to60, cars: to60Cars },
-      { label: slabs[2].label, count: slabCounts.to90, cars: to90Cars },
-      { label: slabs[3].label, count: slabCounts.above90, cars: above90Cars }
+      { label: slabs[0].label, count: slabCounts.upto45, cars: upto45Cars, perN: slabs[0].per_n_tenements },
+      { label: slabs[1].label, count: slabCounts.to60, cars: to60Cars, perN: slabs[1].per_n_tenements },
+      { label: slabs[2].label, count: slabCounts.to90, cars: to90Cars, perN: slabs[2].per_n_tenements },
+      { label: slabs[3].label, count: slabCounts.above90, cars: above90Cars, perN: slabs[3].per_n_tenements }
     ],
     subTotal: subTotal,
     visitor: visitor,
@@ -59,22 +59,39 @@ export function calcResidential(slabCounts, devType) {
 }
 
 // Shopping / Convenience (individual shops) — Table 21, Sr. 10
-// shopSizeCategory: 'upto_20sqm' → rate 150 | 'above_20sqm' → rate 50
-export function calcShopping(totalArea, shopSizeCategory) {
+// Two independent area inputs, both optional:
+//   areaUpto20  — built-up area of shops ≤ 20 sq.m (rate 1 / 150 sq.m)
+//   areaAbove20 — built-up area of shops > 20 sq.m (rate 1 / 50 sq.m)
+// Calculated independently, then summed (Reg 44(2)(3), Table 21 Sr. 10)
+export function calcShopping(areaUpto20, areaAbove20) {
   var rates = parkingRates.shopping_convenience
-  var ratePerSqm = shopSizeCategory === 'upto_20sqm' ? 150 : 50
+  var rateUpto20 = 150
+  var rateAbove20 = 50
 
-  var cars = roundParking(totalArea / ratePerSqm)
+  var carsUpto20 = areaUpto20 > 0 ? roundParking(areaUpto20 / rateUpto20) : 0
+  var carsAbove20 = areaAbove20 > 0 ? roundParking(areaAbove20 / rateAbove20) : 0
+
+  var cars = carsUpto20 + carsAbove20
   var visitor = visitorParking(cars, rates.visitor_minimum)
   var total = cars + visitor
+
+  var totalArea = areaUpto20 + areaAbove20
   var transportVehicle = calcTransportVehicles(totalArea)
+
+  var slabs = []
+  if (areaUpto20 > 0) {
+    slabs.push({ label: 'upto_20sqm', area: areaUpto20, rate: rateUpto20, cars: carsUpto20 })
+  }
+  if (areaAbove20 > 0) {
+    slabs.push({ label: 'above_20sqm', area: areaAbove20, rate: rateAbove20, cars: carsAbove20 })
+  }
 
   return {
     typology: 'shopping_convenience',
     regulation: rates.regulation,
-    area: totalArea,
-    shopSizeCategory: shopSizeCategory,
-    ratePerSqm: ratePerSqm,
+    areaUpto20: areaUpto20,
+    areaAbove20: areaAbove20,
+    slabs: slabs,
     cars: cars,
     visitor: visitor,
     total: total,
@@ -119,8 +136,8 @@ export function calcMercantile(area) {
     area: area,
     nil: false,
     slabs: [
-      { label: 'upto_800sqm', area: slab1Area, cars: slab1Cars },
-      { label: 'above_800sqm', area: slab2Area, cars: slab2Cars }
+      { label: 'upto_800sqm', area: slab1Area, cars: slab1Cars, rate: rates.slabs[0].rate },
+      { label: 'above_800sqm', area: slab2Area, cars: slab2Cars, rate: rates.slabs[1].rate }
     ],
     subTotal: subTotal,
     visitor: visitor,
@@ -150,8 +167,8 @@ export function calcOffice(area) {
     regulation: rates.regulation,
     area: area,
     slabs: [
-      { label: 'upto_1500sqm', area: slab1Area, cars: slab1Cars },
-      { label: 'above_1500sqm', area: slab2Area, cars: slab2Cars }
+      { label: 'upto_1500sqm', area: slab1Area, cars: slab1Cars, rate: rates.slabs[0].rate },
+      { label: 'above_1500sqm', area: slab2Area, cars: slab2Cars, rate: rates.slabs[1].rate }
     ],
     subTotal: subTotal,
     visitor: visitor,
@@ -228,7 +245,7 @@ export function calcParking(typology, inputs) {
     return calcResidential(inputs.slabCounts, inputs.devType)
   }
   if (typology === 'shopping_convenience') {
-    return calcShopping(inputs.totalArea, inputs.shopSizeCategory)
+    return calcShopping(inputs.areaUpto20, inputs.areaAbove20)
   }
   if (typology === 'mercantile') {
     return calcMercantile(inputs.area)
