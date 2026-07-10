@@ -13,8 +13,10 @@ function typologyDisplayName(typology) {
 }
 
 // Normalizes each typology's result shape into a uniform
-// { name, slabs: [{label, area, rate, cars}], subTotal, visitor, total }
+// { name, slabs: [{label, area, rate, cars}], subTotal }
 // for the Section 10 COMPONENT / AREA / RATE / CARS breakdown table.
+// Bug fix: visitor is no longer computed or shown per component — it is calculated
+// once on the grand total base after all component sub-totals are summed.
 function normalizeComponent(result) {
   var name = typologyDisplayName(result.typology)
   var i
@@ -29,7 +31,7 @@ function normalizeComponent(result) {
         cars: result.slabs[i].cars
       })
     }
-    return { name: name, slabs: slabs, subTotal: result.subTotal, visitor: result.visitor, total: result.total }
+    return { name: name, slabs: slabs, subTotal: result.subTotal }
   }
 
   if (result.typology === 'shopping_convenience') {
@@ -43,7 +45,7 @@ function normalizeComponent(result) {
         cars: result.slabs[i].cars
       })
     }
-    return { name: name, slabs: shopSlabs, subTotal: result.cars, visitor: result.visitor, total: result.total }
+    return { name: name, slabs: shopSlabs, subTotal: result.cars }
   }
 
   if (result.typology === 'mercantile' || result.typology === 'office') {
@@ -51,9 +53,7 @@ function normalizeComponent(result) {
       return {
         name: name,
         slabs: [{ label: 'NIL exemption', area: result.area + ' sq.m', rate: '≤ 50 sq.m', cars: 0 }],
-        subTotal: 0,
-        visitor: 0,
-        total: 0
+        subTotal: 0
       }
     }
     var boundaryLabels = result.typology === 'mercantile' ? ['Up to 800 sq.m', 'Above 800 sq.m'] : ['Up to 1500 sq.m', 'Above 1500 sq.m']
@@ -68,7 +68,7 @@ function normalizeComponent(result) {
         })
       }
     }
-    return { name: name, slabs: slabs2, subTotal: result.subTotal, visitor: result.visitor, total: result.total }
+    return { name: name, slabs: slabs2, subTotal: result.subTotal }
   }
 
   if (result.typology === 'school') {
@@ -97,11 +97,10 @@ function normalizeComponent(result) {
       }
     }
     var schoolSubTotal = result.admin.cars + result.assembly.cars + result.canteen.subTotal
-    var schoolVisitor = result.admin.visitor + result.assembly.visitor + result.canteen.visitor
-    return { name: name, slabs: schoolSlabs, subTotal: schoolSubTotal, visitor: schoolVisitor, total: result.grandTotal }
+    return { name: name, slabs: schoolSlabs, subTotal: schoolSubTotal }
   }
 
-  return { name: name, slabs: [], subTotal: 0, visitor: 0, total: 0 }
+  return { name: name, slabs: [], subTotal: 0 }
 }
 
 function Parking() {
@@ -477,15 +476,6 @@ function Parking() {
   var subRowStyle = {
     display: 'flex',
     flexDirection: 'row',
-    fontSize: '12px',
-    color: '#9BB5BF',
-    padding: '4px 0',
-    paddingLeft: '12px'
-  }
-
-  var componentTotalRowStyle = {
-    display: 'flex',
-    flexDirection: 'row',
     fontSize: '13px',
     color: '#FFFFFF',
     padding: '6px 0',
@@ -704,22 +694,10 @@ function Parking() {
                       )
                     })}
                     <div style={subRowStyle}>
-                      <div style={colComponentStyle}>Sub-total</div>
+                      <div style={colComponentStyle}><strong>Sub-total</strong></div>
                       <div style={colAreaStyle}></div>
                       <div style={colRateStyle}></div>
-                      <div style={colCarsStyle}>{norm.subTotal}</div>
-                    </div>
-                    <div style={subRowStyle}>
-                      <div style={colComponentStyle}>Visitor (10%)</div>
-                      <div style={colAreaStyle}></div>
-                      <div style={colRateStyle}></div>
-                      <div style={colCarsStyle}>{norm.visitor}</div>
-                    </div>
-                    <div style={componentTotalRowStyle}>
-                      <div style={colComponentStyle}><strong>Component Total</strong></div>
-                      <div style={colAreaStyle}></div>
-                      <div style={colRateStyle}></div>
-                      <div style={colCarsStyle}><strong>{norm.total}</strong></div>
+                      <div style={colCarsStyle}><strong>{norm.subTotal}</strong></div>
                     </div>
                   </div>
                 )
@@ -727,6 +705,12 @@ function Parking() {
 
               <div style={footerDividerStyle}></div>
 
+              <div style={footerRowStyle}>
+                <div style={colComponentStyle}>VISITOR (10% of grand total base, min 2)</div>
+                <div style={colAreaStyle}></div>
+                <div style={colRateStyle}></div>
+                <div style={colCarsStyle}>{result.visitor}</div>
+              </div>
               <div style={footerRowStyle}>
                 <div style={colComponentStyle}><strong>TOTAL CAR PARKING REQUIRED</strong></div>
                 <div style={colAreaStyle}></div>
