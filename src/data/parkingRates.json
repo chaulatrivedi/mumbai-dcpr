@@ -1,0 +1,112 @@
+{
+  "residential": {
+    "regulation": "Table 21, Sr. 1(i)",
+    "visitor_percent": 10,
+    "visitor_minimum": 1,
+    "new_development": {
+      "slabs": [
+        { "label": "upto_45sqm",    "per_n_tenements": 4 },
+        { "label": "45_to_60sqm",   "per_n_tenements": 2 },
+        { "label": "60_to_90sqm",   "per_n_tenements": 1 },
+        { "label": "above_90sqm",   "per_n_tenements": 0.5 }
+      ],
+      "note": "Slabs A & B: owner may opt for 1 per tenement instead"
+    },
+    "redevelopment_33series": {
+      "slabs": [
+        { "label": "upto_45sqm",    "per_n_tenements": 8 },
+        { "label": "45_to_60sqm",   "per_n_tenements": 4 },
+        { "label": "60_to_90sqm",   "per_n_tenements": 2 },
+        { "label": "above_90sqm",   "per_n_tenements": 1 }
+      ]
+    },
+    "transport_vehicle": { "applicable": false },
+    "two_wheeler": { "optional": true, "rate": "1 per 2 tenements" }
+  },
+  "shopping_convenience": {
+    "regulation": "Table 21, Sr. 10",
+    "note": "Individual shops — not under Mercantile occupancy",
+    "rates": [
+      { "shop_size": "upto_20sqm",   "rate_per_sqm": 150 },
+      { "shop_size": "above_20sqm",  "rate_per_sqm": 50 }
+    ],
+    "visitor_percent": 10,
+    "visitor_minimum": 2,
+    "transport_vehicle": {
+      "applicable": true,
+      "exemption_sqm": 400,
+      "rate_per_sqm": 2000,
+      "min": 1,
+      "max": 6
+    }
+  },
+  "mercantile": {
+    "regulation": "Table 21, Sr. 5",
+    "note": "Markets, departmental stores, large format retail",
+    "nil_exemption_sqm": 50,
+    "slabs": [
+      { "up_to": 800, "rate": 40 },
+      { "above": 800, "rate": 80 }
+    ],
+    "visitor_percent": 10,
+    "visitor_minimum": 2,
+    "transport_vehicle": {
+      "applicable": true,
+      "exemption_sqm": 400,
+      "rate_per_sqm": 2000,
+      "min": 1,
+      "max": 6
+    }
+  },
+  "office": {
+    "regulation": "Table 21, Sr. 4",
+    "note": "Govt / semi-public / private office buildings incl. IT Parks",
+    "slabs": [
+      { "up_to": 1500, "rate": 37.5 },
+      { "above": 1500, "rate": 75 }
+    ],
+    "visitor_percent": 10,
+    "visitor_minimum": 2,
+    "transport_vehicle": {
+      "applicable": true,
+      "exemption_sqm": 400,
+      "rate_per_sqm": 2000,
+      "min": 1,
+      "max": 6
+    }
+  },
+  "school": {
+    "regulation": "Table 21, Sr. 2",
+    "components": {
+      "admin": {
+        "regulation": "Table 21, Sr. 2",
+        "rate": 35,
+        "visitor_percent": 10,
+        "visitor_minimum": 2
+      },
+      "assembly_fixed_seats": {
+        "regulation": "Table 21, Sr. 3(a)",
+        "rate_per_seats": 12,
+        "visitor_percent": 10,
+        "visitor_minimum": 2
+      },
+      "assembly_no_fixed_seats": {
+        "regulation": "Table 21, Sr. 3(b)",
+        "rate_per_sqm": 15,
+        "visitor_percent": 10,
+        "visitor_minimum": 2
+      },
+      "canteen": {
+        "regulation": "Table 21, Sr. 3(c) read with Sr. 5",
+        "nil_exemption_sqm": 50,
+        "slabs": [
+          { "up_to": 800, "rate": 40 },
+          { "above": 800, "rate": 80 }
+        ],
+        "visitor_percent": 10,
+        "visitor_minimum": 2
+      }
+    },
+    "transport_vehicle": { "applicable": false }
+  }
+}
