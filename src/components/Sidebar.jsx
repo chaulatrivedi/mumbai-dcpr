@@ -100,9 +100,7 @@ function Sidebar() {
     { number: '02', label: 'FSI' },
     { number: '03', label: 'Toilets' },
     { number: '04', label: 'Refuge' },
-    { number: '05', label: 'Stairs' },
-    { number: '06', label: 'Open Sp' },
-    { number: '07', label: 'Lifts' }
+    { number: '05', label: 'Open Space' }
   ]
 
   return (
