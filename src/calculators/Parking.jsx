@@ -15,8 +15,8 @@ function typologyDisplayName(typology) {
 // Normalizes each typology's result shape into a uniform
 // { name, slabs: [{label, area, rate, cars}], subTotal }
 // for the Section 10 COMPONENT / AREA / RATE / CARS breakdown table.
-// Bug fix: visitor is no longer computed or shown per component — it is calculated
-// once on the grand total base after all component sub-totals are summed.
+// FIX 1: all sq.m area figures are formatted with toFixed(2) for display.
+// Tenement counts and seat counts are not areas and are left as whole numbers.
 function normalizeComponent(result) {
   var name = typologyDisplayName(result.typology)
   var i
@@ -40,7 +40,7 @@ function normalizeComponent(result) {
       var slabLabel = result.slabs[i].label === 'upto_20sqm' ? 'Shops ≤ 20 sq.m' : 'Shops > 20 sq.m'
       shopSlabs.push({
         label: slabLabel,
-        area: result.slabs[i].area + ' sq.m',
+        area: result.slabs[i].area.toFixed(2) + ' sq.m',
         rate: '1 / ' + result.slabs[i].rate + ' sq.m',
         cars: result.slabs[i].cars
       })
@@ -52,7 +52,7 @@ function normalizeComponent(result) {
     if (result.nil === true) {
       return {
         name: name,
-        slabs: [{ label: 'NIL exemption', area: result.area + ' sq.m', rate: '≤ 50 sq.m', cars: 0 }],
+        slabs: [{ label: 'NIL exemption', area: result.area.toFixed(2) + ' sq.m', rate: '≤ 50 sq.m', cars: 0 }],
         subTotal: 0
       }
     }
@@ -62,7 +62,7 @@ function normalizeComponent(result) {
       if (result.slabs[i].area > 0) {
         slabs2.push({
           label: boundaryLabels[i],
-          area: result.slabs[i].area + ' sq.m',
+          area: result.slabs[i].area.toFixed(2) + ' sq.m',
           rate: '1 / ' + result.slabs[i].rate + ' sq.m',
           cars: result.slabs[i].cars
         })
@@ -75,25 +75,25 @@ function normalizeComponent(result) {
     var schoolSlabs = []
     schoolSlabs.push({
       label: 'Admin / Public Service',
-      area: result.admin.area + ' sq.m',
+      area: result.admin.area.toFixed(2) + ' sq.m',
       rate: '1 / 35 sq.m',
       cars: result.admin.cars
     })
     if (result.assembly.type !== 'none') {
-      var assemblyUnit = result.assembly.type === 'fixed' ? ' seats' : ' sq.m'
+      var assemblyArea = result.assembly.type === 'fixed' ? String(result.assembly.value) + ' seats' : result.assembly.value.toFixed(2) + ' sq.m'
       var assemblyRate = result.assembly.type === 'fixed' ? '1 / 12 seats' : '1 / 15 sq.m'
       schoolSlabs.push({
         label: 'Assembly Hall',
-        area: result.assembly.value + assemblyUnit,
+        area: assemblyArea,
         rate: assemblyRate,
         cars: result.assembly.cars
       })
     }
     if (result.canteen.area > 0) {
       if (result.canteen.nil === true) {
-        schoolSlabs.push({ label: 'Canteen / Tiffin Room', area: result.canteen.area + ' sq.m', rate: 'NIL ≤ 50 sq.m', cars: 0 })
+        schoolSlabs.push({ label: 'Canteen / Tiffin Room', area: result.canteen.area.toFixed(2) + ' sq.m', rate: 'NIL ≤ 50 sq.m', cars: 0 })
       } else {
-        schoolSlabs.push({ label: 'Canteen / Tiffin Room', area: result.canteen.area + ' sq.m', rate: '1/40, 1/80', cars: result.canteen.subTotal })
+        schoolSlabs.push({ label: 'Canteen / Tiffin Room', area: result.canteen.area.toFixed(2) + ' sq.m', rate: '1/40, 1/80', cars: result.canteen.subTotal })
       }
     }
     var schoolSubTotal = result.admin.cars + result.assembly.cars + result.canteen.subTotal
@@ -104,6 +104,10 @@ function normalizeComponent(result) {
 }
 
 function Parking() {
+  var projectNameState = React.useState('')
+  var projectName = projectNameState[0]
+  var setProjectName = projectNameState[1]
+
   var residentialCheckedState = React.useState(false)
   var residentialChecked = residentialCheckedState[0]
   var setResidentialChecked = residentialCheckedState[1]
@@ -188,9 +192,40 @@ function Parking() {
   var canteenArea = canteenAreaState[0]
   var setCanteenArea = canteenAreaState[1]
 
+  var proposeTwoWheelerState = React.useState('no')
+  var proposeTwoWheeler = proposeTwoWheelerState[0]
+  var setProposeTwoWheeler = proposeTwoWheelerState[1]
+
   var resultState = React.useState(null)
   var result = resultState[0]
   var setResult = resultState[1]
+
+  var calculationDateState = React.useState('')
+  var calculationDate = calculationDateState[0]
+  var setCalculationDate = calculationDateState[1]
+
+  var isPrintModeState = React.useState(false)
+  var isPrintMode = isPrintModeState[0]
+  var setIsPrintMode = isPrintModeState[1]
+
+  // FIX 3: toggle print-only layout via beforeprint/afterprint instead of a CSS media
+  // query class, since the locked coding rules require inline styles only, with no
+  // external CSS classes — window.matchMedia('print') has no inline-style equivalent,
+  // but these events let React state drive the same inline display:none/block toggle.
+  React.useEffect(function () {
+    function handleBeforePrint() {
+      setIsPrintMode(true)
+    }
+    function handleAfterPrint() {
+      setIsPrintMode(false)
+    }
+    window.addEventListener('beforeprint', handleBeforePrint)
+    window.addEventListener('afterprint', handleAfterPrint)
+    return function () {
+      window.removeEventListener('beforeprint', handleBeforePrint)
+      window.removeEventListener('afterprint', handleAfterPrint)
+    }
+  }, [])
 
   function handleCalculate() {
     var components = []
@@ -259,6 +294,24 @@ function Parking() {
 
     var mixedResult = calcMixedUse(components)
     setResult(mixedResult)
+    setCalculationDate(new Date().toLocaleDateString())
+  }
+
+  function handleDownloadPdf() {
+    window.print()
+  }
+
+  var pageWrapStyle = {
+    display: isPrintMode ? 'none' : 'block'
+  }
+
+  var inputsWrapStyle = {
+    display: isPrintMode ? 'none' : 'block',
+    flex: 1
+  }
+
+  var downloadButtonWrapStyle = {
+    display: isPrintMode ? 'none' : 'block'
   }
 
   var headingStyle = {
@@ -289,7 +342,6 @@ function Parking() {
     border: '0.5px solid #E2DDD5',
     borderRadius: '8px',
     padding: '20px 24px',
-    flex: 1,
     fontFamily: 'system-ui'
   }
 
@@ -395,6 +447,33 @@ function Parking() {
     marginTop: '16px',
     cursor: 'pointer',
     fontFamily: 'system-ui'
+  }
+
+  var pdfButtonStyle = {
+    backgroundColor: '#1E2820',
+    color: '#F5F0E8',
+    fontSize: '13px',
+    fontWeight: 500,
+    padding: '8px 20px',
+    borderRadius: '6px',
+    border: '0.5px solid #E2DDD5',
+    width: '100%',
+    marginTop: '12px',
+    cursor: 'pointer',
+    fontFamily: 'system-ui'
+  }
+
+  var projectNameLineStyle = {
+    fontSize: '15px',
+    fontWeight: 500,
+    color: '#F5F0E8',
+    marginBottom: '4px'
+  }
+
+  var calculationDateLineStyle = {
+    fontSize: '11px',
+    color: '#9BB5BF',
+    marginBottom: '16px'
   }
 
   var regTagStyle = {
@@ -511,162 +590,182 @@ function Parking() {
 
   return (
     <div>
-      <div style={headingStyle}>Parking</div>
-      <div style={subheadingStyle}>Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
+      <div style={pageWrapStyle}>
+        <div style={headingStyle}>Parking</div>
+        <div style={subheadingStyle}>Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
+      </div>
 
       <div style={panelRowStyle}>
-        <div style={inputsPanelStyle}>
-          <div style={sectionLabelStyle}>Typologies (select one or more)</div>
-          <label style={checkboxLabelStyle}>
-            <input type="checkbox" checked={residentialChecked} onChange={function (e) { setResidentialChecked(e.target.checked) }} />
-            Residential
-          </label>
-          <label style={checkboxLabelStyle}>
-            <input type="checkbox" checked={shoppingChecked} onChange={function (e) { setShoppingChecked(e.target.checked) }} />
-            Shopping / Convenience
-          </label>
-          <label style={checkboxLabelStyle}>
-            <input type="checkbox" checked={mercantileChecked} onChange={function (e) { setMercantileChecked(e.target.checked) }} />
-            Mercantile
-          </label>
-          <label style={checkboxLabelStyle}>
-            <input type="checkbox" checked={officeChecked} onChange={function (e) { setOfficeChecked(e.target.checked) }} />
-            Office / Commercial
-          </label>
-          <label style={checkboxLabelStyle}>
-            <input type="checkbox" checked={schoolChecked} onChange={function (e) { setSchoolChecked(e.target.checked) }} />
-            School / Educational
-          </label>
+        <div style={inputsWrapStyle}>
+          <div style={inputsPanelStyle}>
+            <div style={sectionLabelStyle}>Project Name</div>
+            <input style={inputStyle} type="text" value={projectName} onChange={function (e) { setProjectName(e.target.value) }} />
 
-          {residentialChecked ? (
-            <div style={typologyBlockStyle}>
-              <div style={typologyTitleStyle}>Residential</div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Development Type</div>
-                <select style={selectStyle} value={devType} onChange={function (e) { setDevType(e.target.value) }}>
-                  <option value="new">New Development</option>
-                  <option value="redevelopment_33series">Redevelopment (33-series)</option>
-                </select>
-              </div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Tenements &mdash; up to 45 sq.m</div>
-                <input style={inputStyle} type="number" value={upto45} onChange={function (e) { setUpto45(e.target.value) }} />
-              </div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Tenements &mdash; 45 to 60 sq.m</div>
-                <input style={inputStyle} type="number" value={to60} onChange={function (e) { setTo60(e.target.value) }} />
-              </div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Tenements &mdash; 60 to 90 sq.m</div>
-                <input style={inputStyle} type="number" value={to90} onChange={function (e) { setTo90(e.target.value) }} />
-              </div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Tenements &mdash; above 90 sq.m</div>
-                <input style={inputStyle} type="number" value={above90} onChange={function (e) { setAbove90(e.target.value) }} />
-              </div>
+            <div style={fieldGroupStyle}>
+              <div style={sectionLabelStyle}>Typologies (select one or more)</div>
+              <label style={checkboxLabelStyle}>
+                <input type="checkbox" checked={residentialChecked} onChange={function (e) { setResidentialChecked(e.target.checked) }} />
+                Residential
+              </label>
+              <label style={checkboxLabelStyle}>
+                <input type="checkbox" checked={shoppingChecked} onChange={function (e) { setShoppingChecked(e.target.checked) }} />
+                Shopping / Convenience
+              </label>
+              <label style={checkboxLabelStyle}>
+                <input type="checkbox" checked={mercantileChecked} onChange={function (e) { setMercantileChecked(e.target.checked) }} />
+                Mercantile
+              </label>
+              <label style={checkboxLabelStyle}>
+                <input type="checkbox" checked={officeChecked} onChange={function (e) { setOfficeChecked(e.target.checked) }} />
+                Office / Commercial
+              </label>
+              <label style={checkboxLabelStyle}>
+                <input type="checkbox" checked={schoolChecked} onChange={function (e) { setSchoolChecked(e.target.checked) }} />
+                School / Educational
+              </label>
             </div>
-          ) : null}
 
-          {shoppingChecked ? (
-            <div style={typologyBlockStyle}>
-              <div style={typologyTitleStyle}>Shopping / Convenience</div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Area of Shops &le; 20 sq.m (optional)</div>
-                <input style={inputStyle} type="number" value={shopAreaUpto20} onChange={function (e) { setShopAreaUpto20(e.target.value) }} />
-              </div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Area of Shops &gt; 20 sq.m (optional)</div>
-                <input style={inputStyle} type="number" value={shopAreaAbove20} onChange={function (e) { setShopAreaAbove20(e.target.value) }} />
-              </div>
-            </div>
-          ) : null}
-
-          {mercantileChecked ? (
-            <div style={typologyBlockStyle}>
-              <div style={typologyTitleStyle}>Mercantile</div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Total Built-up Area (sq.m)</div>
-                <input style={inputStyle} type="number" value={mercantileArea} onChange={function (e) { setMercantileArea(e.target.value) }} />
-              </div>
-            </div>
-          ) : null}
-
-          {officeChecked ? (
-            <div style={typologyBlockStyle}>
-              <div style={typologyTitleStyle}>Office / Commercial</div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Total Office Built-up Area (sq.m)</div>
-                <input style={inputStyle} type="number" value={officeArea} onChange={function (e) { setOfficeArea(e.target.value) }} />
-              </div>
-            </div>
-          ) : null}
-
-          {schoolChecked ? (
-            <div style={typologyBlockStyle}>
-              <div style={typologyTitleStyle}>School / Educational</div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Admin / Public Service Area (sq.m)</div>
-                <input style={inputStyle} type="number" value={adminArea} onChange={function (e) { setAdminArea(e.target.value) }} />
-              </div>
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Assembly Hall / Auditorium Present?</div>
-                <select style={selectStyle} value={assemblyPresent} onChange={function (e) { setAssemblyPresent(e.target.value) }}>
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </div>
-
-              {assemblyPresent === 'yes' ? (
-                <div>
-                  <div style={fieldGroupStyle}>
-                    <div style={sectionLabelStyle}>Seating Type</div>
-                    <select style={selectStyle} value={assemblySeatType} onChange={function (e) { setAssemblySeatType(e.target.value) }}>
-                      <option value="fixed">Fixed Seats</option>
-                      <option value="no_fixed">No Fixed Seats</option>
-                    </select>
-                  </div>
-                  {assemblySeatType === 'fixed' ? (
-                    <div style={fieldGroupStyle}>
-                      <div style={sectionLabelStyle}>Number of Seats</div>
-                      <input style={inputStyle} type="number" value={assemblySeats} onChange={function (e) { setAssemblySeats(e.target.value) }} />
-                    </div>
-                  ) : (
-                    <div style={fieldGroupStyle}>
-                      <div style={sectionLabelStyle}>Assembly Floor Area (sq.m)</div>
-                      <input style={inputStyle} type="number" value={assemblyFloorArea} onChange={function (e) { setAssemblyFloorArea(e.target.value) }} />
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              <div style={fieldGroupStyle}>
-                <div style={sectionLabelStyle}>Canteen / Tiffin Room Present?</div>
-                <select style={selectStyle} value={canteenPresent} onChange={function (e) { setCanteenPresent(e.target.value) }}>
-                  <option value="no">No</option>
-                  <option value="yes">Yes</option>
-                </select>
-              </div>
-
-              {canteenPresent === 'yes' ? (
+            {residentialChecked ? (
+              <div style={typologyBlockStyle}>
+                <div style={typologyTitleStyle}>Residential</div>
                 <div style={fieldGroupStyle}>
-                  <div style={sectionLabelStyle}>Canteen / Tiffin Room Area (sq.m)</div>
-                  <input style={inputStyle} type="number" value={canteenArea} onChange={function (e) { setCanteenArea(e.target.value) }} />
+                  <div style={sectionLabelStyle}>Development Type</div>
+                  <select style={selectStyle} value={devType} onChange={function (e) { setDevType(e.target.value) }}>
+                    <option value="new">New Development</option>
+                    <option value="redevelopment_33series">Redevelopment (33-series)</option>
+                  </select>
                 </div>
-              ) : null}
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Tenements &mdash; up to 45 sq.m</div>
+                  <input style={inputStyle} type="number" value={upto45} onChange={function (e) { setUpto45(e.target.value) }} />
+                </div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Tenements &mdash; 45 to 60 sq.m</div>
+                  <input style={inputStyle} type="number" value={to60} onChange={function (e) { setTo60(e.target.value) }} />
+                </div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Tenements &mdash; 60 to 90 sq.m</div>
+                  <input style={inputStyle} type="number" value={to90} onChange={function (e) { setTo90(e.target.value) }} />
+                </div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Tenements &mdash; above 90 sq.m</div>
+                  <input style={inputStyle} type="number" value={above90} onChange={function (e) { setAbove90(e.target.value) }} />
+                </div>
+              </div>
+            ) : null}
+
+            {shoppingChecked ? (
+              <div style={typologyBlockStyle}>
+                <div style={typologyTitleStyle}>Shopping / Convenience</div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Area of Shops &le; 20 sq.m (optional)</div>
+                  <input style={inputStyle} type="number" value={shopAreaUpto20} onChange={function (e) { setShopAreaUpto20(e.target.value) }} />
+                </div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Area of Shops &gt; 20 sq.m (optional)</div>
+                  <input style={inputStyle} type="number" value={shopAreaAbove20} onChange={function (e) { setShopAreaAbove20(e.target.value) }} />
+                </div>
+              </div>
+            ) : null}
+
+            {mercantileChecked ? (
+              <div style={typologyBlockStyle}>
+                <div style={typologyTitleStyle}>Mercantile</div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Total Built-up Area (sq.m)</div>
+                  <input style={inputStyle} type="number" value={mercantileArea} onChange={function (e) { setMercantileArea(e.target.value) }} />
+                </div>
+              </div>
+            ) : null}
+
+            {officeChecked ? (
+              <div style={typologyBlockStyle}>
+                <div style={typologyTitleStyle}>Office / Commercial</div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Total Office Built-up Area (sq.m)</div>
+                  <input style={inputStyle} type="number" value={officeArea} onChange={function (e) { setOfficeArea(e.target.value) }} />
+                </div>
+              </div>
+            ) : null}
+
+            {schoolChecked ? (
+              <div style={typologyBlockStyle}>
+                <div style={typologyTitleStyle}>School / Educational</div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Admin / Public Service Area (sq.m)</div>
+                  <input style={inputStyle} type="number" value={adminArea} onChange={function (e) { setAdminArea(e.target.value) }} />
+                </div>
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Assembly Hall / Auditorium Present?</div>
+                  <select style={selectStyle} value={assemblyPresent} onChange={function (e) { setAssemblyPresent(e.target.value) }}>
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
+
+                {assemblyPresent === 'yes' ? (
+                  <div>
+                    <div style={fieldGroupStyle}>
+                      <div style={sectionLabelStyle}>Seating Type</div>
+                      <select style={selectStyle} value={assemblySeatType} onChange={function (e) { setAssemblySeatType(e.target.value) }}>
+                        <option value="fixed">Fixed Seats</option>
+                        <option value="no_fixed">No Fixed Seats</option>
+                      </select>
+                    </div>
+                    {assemblySeatType === 'fixed' ? (
+                      <div style={fieldGroupStyle}>
+                        <div style={sectionLabelStyle}>Number of Seats</div>
+                        <input style={inputStyle} type="number" value={assemblySeats} onChange={function (e) { setAssemblySeats(e.target.value) }} />
+                      </div>
+                    ) : (
+                      <div style={fieldGroupStyle}>
+                        <div style={sectionLabelStyle}>Assembly Floor Area (sq.m)</div>
+                        <input style={inputStyle} type="number" value={assemblyFloorArea} onChange={function (e) { setAssemblyFloorArea(e.target.value) }} />
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                <div style={fieldGroupStyle}>
+                  <div style={sectionLabelStyle}>Canteen / Tiffin Room Present?</div>
+                  <select style={selectStyle} value={canteenPresent} onChange={function (e) { setCanteenPresent(e.target.value) }}>
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </div>
+
+                {canteenPresent === 'yes' ? (
+                  <div style={fieldGroupStyle}>
+                    <div style={sectionLabelStyle}>Canteen / Tiffin Room Area (sq.m)</div>
+                    <input style={inputStyle} type="number" value={canteenArea} onChange={function (e) { setCanteenArea(e.target.value) }} />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div style={fieldGroupStyle}>
+              <div style={sectionLabelStyle}>Propose Two-Wheeler Parking? (Reg 44(4), optional)</div>
+              <select style={selectStyle} value={proposeTwoWheeler} onChange={function (e) { setProposeTwoWheeler(e.target.value) }}>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
             </div>
-          ) : null}
 
-          <div style={basisLineStyle}>
-            <span style={basisPrefixStyle}>BASIS</span>
-            DCPR 2034, Reg 44(2), Table 21
+            <div style={basisLineStyle}>
+              <span style={basisPrefixStyle}>BASIS</span>
+              DCPR 2034, Reg 44(2), Table 21
+            </div>
+
+            <button type="button" style={buttonStyle} onClick={handleCalculate}>Calculate</button>
           </div>
-
-          <button type="button" style={buttonStyle} onClick={handleCalculate}>Calculate</button>
         </div>
 
         <div style={resultsPanelStyle}>
           {result ? (
             <div>
+              <div style={projectNameLineStyle}>{projectName === '' ? 'Untitled Project' : projectName}</div>
+              <div style={calculationDateLineStyle}>Date of calculation: {calculationDate}</div>
+
               <div style={regTagStyle}>Table 21</div>
               <div style={resultNumberStyle}>{result.grandTotal}</div>
               <div style={resultUnitStyle}>total cars</div>
@@ -717,12 +816,14 @@ function Parking() {
                 <div style={colRateStyle}></div>
                 <div style={colCarsStyle}><strong>{result.grandTotal}</strong></div>
               </div>
-              <div style={footerRowStyle}>
-                <div style={colComponentStyle}>TWO-WHEELER PARKING (optional &mdash; if proposed)</div>
-                <div style={colAreaStyle}></div>
-                <div style={colRateStyle}></div>
-                <div style={colCarsStyle}>{result.twoWheelerOptional}</div>
-              </div>
+              {proposeTwoWheeler === 'yes' ? (
+                <div style={footerRowStyle}>
+                  <div style={colComponentStyle}>TWO-WHEELER PARKING (proposed &mdash; Reg 44(4))</div>
+                  <div style={colAreaStyle}></div>
+                  <div style={colRateStyle}></div>
+                  <div style={colCarsStyle}>{result.twoWheelerOptional}</div>
+                </div>
+              ) : null}
               <div style={footerRowStyle}>
                 <div style={colComponentStyle}>TRANSPORT VEHICLES</div>
                 <div style={colAreaStyle}></div>
@@ -732,6 +833,10 @@ function Parking() {
 
               <div style={footerDividerStyle}></div>
               <div style={regulationLineStyle}>REGULATION: Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
+
+              <div style={downloadButtonWrapStyle}>
+                <button type="button" style={pdfButtonStyle} onClick={handleDownloadPdf}>Download PDF</button>
+              </div>
             </div>
           ) : (
             <div style={emptyStateStyle}>Select at least one typology, enter inputs and calculate to see results</div>
