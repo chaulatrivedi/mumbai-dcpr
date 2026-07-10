@@ -74,7 +74,7 @@ function Nav() {
         <span style={badgeStyle}>2034</span>
         <div style={linkGroupStyle}>
           <span style={linkActiveStyle}>Calculators</span>
-          <span style={linkInactiveStyle}>Regs</span>
+          <span style={linkInactiveStyle}>Regulations</span>
           <span style={linkInactiveStyle}>Ask AI</span>
         </div>
       </div>
