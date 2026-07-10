@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Nav from './components/Nav.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Parking from './calculators/Parking.jsx'
+import Toilets from './calculators/Toilets.jsx'
 
 function App() {
   var pageStyle = {
@@ -32,6 +33,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Parking />} />
               <Route path="/parking" element={<Parking />} />
+              <Route path="/toilets" element={<Toilets />} />
             </Routes>
           </div>
         </div>
