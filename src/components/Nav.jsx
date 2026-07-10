@@ -1,10 +1,32 @@
 import React from 'react'
 
 function Nav() {
+  var isPrintModeState = React.useState(false)
+  var isPrintMode = isPrintModeState[0]
+  var setIsPrintMode = isPrintModeState[1]
+
+  // Hides the nav bar when printing a calculator result to PDF (window.print()).
+  // Driven by beforeprint/afterprint state, not a CSS media-query class, to keep
+  // the locked inline-styles-only rule intact.
+  React.useEffect(function () {
+    function handleBeforePrint() {
+      setIsPrintMode(true)
+    }
+    function handleAfterPrint() {
+      setIsPrintMode(false)
+    }
+    window.addEventListener('beforeprint', handleBeforePrint)
+    window.addEventListener('afterprint', handleAfterPrint)
+    return function () {
+      window.removeEventListener('beforeprint', handleBeforePrint)
+      window.removeEventListener('afterprint', handleAfterPrint)
+    }
+  }, [])
+
   var navStyle = {
     height: '48px',
     backgroundColor: '#1E2820',
-    display: 'flex',
+    display: isPrintMode ? 'none' : 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '0 24px',

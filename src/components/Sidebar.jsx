@@ -5,11 +5,33 @@ function Sidebar() {
   var location = useLocation()
   var currentPath = location.pathname
 
+  var isPrintModeState = React.useState(false)
+  var isPrintMode = isPrintModeState[0]
+  var setIsPrintMode = isPrintModeState[1]
+
+  // Hides the sidebar when printing a calculator result to PDF (window.print()).
+  // Driven by beforeprint/afterprint state, not a CSS media-query class, to keep
+  // the locked inline-styles-only rule intact.
+  React.useEffect(function () {
+    function handleBeforePrint() {
+      setIsPrintMode(true)
+    }
+    function handleAfterPrint() {
+      setIsPrintMode(false)
+    }
+    window.addEventListener('beforeprint', handleBeforePrint)
+    window.addEventListener('afterprint', handleAfterPrint)
+    return function () {
+      window.removeEventListener('beforeprint', handleBeforePrint)
+      window.removeEventListener('afterprint', handleAfterPrint)
+    }
+  }, [])
+
   var containerStyle = {
     width: '220px',
     minWidth: '220px',
     backgroundColor: '#F5F0E8',
-    display: 'flex',
+    display: isPrintMode ? 'none' : 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
     padding: '16px 0',
