@@ -1,0 +1,63 @@
+{
+  "occupantLoad": {
+    "school": 25,
+    "office": 10,
+    "retail_street": 33.3,
+    "retail_upper": 16.6
+  },
+  "fixtures": {
+    "school_boys": {
+      "wc": 40,
+      "urinal": 20,
+      "washbasin": 60,
+      "drinkingWater": 50
+    },
+    "school_girls": {
+      "wc": 25,
+      "washbasin": 40,
+      "drinkingWater": 50
+    },
+    "office_male": {
+      "wc": 25,
+      "washbasin": 25,
+      "drinkingWater": 100
+    },
+    "office_female": {
+      "wc": 15,
+      "washbasin": 25,
+      "drinkingWater": 100
+    }
+  },
+  "urinalSlab": [
+    { "min": 0,   "max": 6,    "count": 0 },
+    { "min": 7,   "max": 20,   "count": 1 },
+    { "min": 21,  "max": 45,   "count": 2 },
+    { "min": 46,  "max": 70,   "count": 3 },
+    { "min": 71,  "max": 100,  "count": 4 },
+    { "min": 101, "max": 200,  "rate": 0.03,  "base": 4 },
+    { "min": 201, "max": null, "rate": 0.025 }
+  ],
+  "retailStaffWcSlab": {
+    "male": [
+      { "min": 0,  "max": 15,  "count": 1 },
+      { "min": 16, "max": 35,  "count": 2 },
+      { "min": 36, "max": 65,  "count": 3 },
+      { "min": 66, "max": 100, "count": 4 }
+    ],
+    "female": [
+      { "min": 0,  "max": 12,  "count": 1 },
+      { "min": 13, "max": 25,  "count": 2 },
+      { "min": 26, "max": 40,  "count": 3 },
+      { "min": 41, "max": 57,  "count": 4 },
+      { "min": 58, "max": 77,  "count": 5 },
+      { "min": 78, "max": 100, "count": 6 }
+    ]
+  },
+  "da_toilet": {
+    "regulation": "DCPR Reg 39, Cl. 3.5",
+    "min_size": "1.5m × 1.75m",
+    "door_clear": "0.9m swing out",
+    "wash_basin_height": "rim ≤ 0.75m above FFL",
+    "emergency_bell": true
+  }
+}
