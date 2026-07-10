@@ -259,28 +259,58 @@ export function calcParking(typology, inputs) {
   return null
 }
 
+// Extracts a component's pre-visitor car sub-total — used only for the mixed-use grand
+// total base (Bug fix: visitor must be computed once on the combined total, not per
+// component). Each typology's own calcXxx() function is unaffected and still computes
+// its own standalone visitor/total per the brief's per-typology worked examples.
+function getComponentSubTotal(result) {
+  if (result.typology === 'residential') {
+    return result.subTotal
+  }
+  if (result.typology === 'shopping_convenience') {
+    return result.cars
+  }
+  if (result.typology === 'mercantile' || result.typology === 'office') {
+    return result.subTotal
+  }
+  if (result.typology === 'school') {
+    return result.admin.cars + result.assembly.cars + result.canteen.subTotal
+  }
+  return 0
+}
+
 // Mixed use — combine independent typology components (Reg 44, Table 21 §8)
 // components: [{ typology: '...', inputs: {...} }, ...]
+//
+// Bug fix: visitor parking is calculated ONCE on the grand total base (sum of every
+// component's pre-visitor car sub-total), not per component:
+//   1. Each component's sub-total — cars only, no visitor
+//   2. Sum all sub-totals = grand total base
+//   3. Visitor = roundParking(grand total base × 0.10), minimum 2
+//   4. TOTAL CAR PARKING = grand total base + visitor
 export function calcMixedUse(components) {
   var results = []
-  var grandTotal = 0
+  var grandTotalBase = 0
   var transportTotal = 0
   var i
 
   for (i = 0; i < components.length; i = i + 1) {
     var result = calcParking(components[i].typology, components[i].inputs)
     results.push(result)
-    var componentTotal = result.typology === 'school' ? result.grandTotal : result.total
-    grandTotal = grandTotal + componentTotal
+    grandTotalBase = grandTotalBase + getComponentSubTotal(result)
     transportTotal = transportTotal + result.transportVehicle
   }
 
+  var visitor = visitorParking(grandTotalBase, 2)
+  var totalCarParking = grandTotalBase + visitor
   var transportVehicle = transportTotal > 6 ? 6 : transportTotal
 
   return {
     components: results,
-    grandTotal: grandTotal,
+    grandTotalBase: grandTotalBase,
+    visitor: visitor,
+    grandTotal: totalCarParking,
     transportVehicle: transportVehicle,
-    twoWheelerOptional: grandTotal
+    twoWheelerOptional: totalCarParking
   }
 }
