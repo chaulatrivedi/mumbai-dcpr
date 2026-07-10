@@ -1,6 +1,10 @@
 import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 function Sidebar() {
+  var location = useLocation()
+  var currentPath = location.pathname
+
   var containerStyle = {
     width: '220px',
     minWidth: '220px',
@@ -27,7 +31,18 @@ function Sidebar() {
     cursor: 'default'
   }
 
-  var activeItemStyle = {
+  var linkItemStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 20px',
+    fontSize: '13px',
+    fontWeight: 400,
+    borderBottom: '1px solid #E2DDD5',
+    cursor: 'pointer',
+    textDecoration: 'none'
+  }
+
+  var linkActiveItemStyle = {
     display: 'flex',
     alignItems: 'center',
     padding: '10px 20px',
@@ -35,7 +50,8 @@ function Sidebar() {
     fontWeight: 400,
     backgroundColor: '#2D5A3D',
     borderBottom: '1px solid #E2DDD5',
-    cursor: 'default'
+    cursor: 'pointer',
+    textDecoration: 'none'
   }
 
   var numberStyle = {
@@ -95,31 +111,45 @@ function Sidebar() {
     boxSizing: 'border-box'
   }
 
+  // path: null means the calculator has not been built yet — placeholder only, not clickable
   var items = [
-    { number: '01', label: 'Parking' },
-    { number: '02', label: 'FSI' },
-    { number: '03', label: 'Toilets' },
-    { number: '04', label: 'Refuge' },
-    { number: '05', label: 'Open Space' }
+    { number: '01', label: 'Parking', path: '/parking' },
+    { number: '02', label: 'FSI', path: null },
+    { number: '03', label: 'Toilets', path: '/toilets' },
+    { number: '04', label: 'Refuge', path: null },
+    { number: '05', label: 'Open Space', path: null }
   ]
+
+  function isItemActive(item) {
+    if (item.path === null) {
+      return false
+    }
+    if (item.path === '/parking' && currentPath === '/') {
+      return true
+    }
+    return currentPath === item.path
+  }
 
   return (
     <div style={containerStyle}>
       <div style={listStyle}>
-        {items.map(function (item, index) {
-          if (index === 0) {
+        {items.map(function (item) {
+          var active = isItemActive(item)
+
+          if (item.path === null) {
             return (
-              <div key={item.number} style={activeItemStyle}>
-                <span style={numberActiveStyle}>{item.number}</span>
-                <span style={labelActiveStyle}>{item.label}</span>
+              <div key={item.number} style={itemBaseStyle}>
+                <span style={numberStyle}>{item.number}</span>
+                <span style={labelInactiveStyle}>{item.label}</span>
               </div>
             )
           }
+
           return (
-            <div key={item.number} style={itemBaseStyle}>
-              <span style={numberStyle}>{item.number}</span>
-              <span style={labelInactiveStyle}>{item.label}</span>
-            </div>
+            <Link key={item.number} to={item.path} style={active ? linkActiveItemStyle : linkItemStyle}>
+              <span style={active ? numberActiveStyle : numberStyle}>{item.number}</span>
+              <span style={active ? labelActiveStyle : labelInactiveStyle}>{item.label}</span>
+            </Link>
           )
         })}
       </div>
