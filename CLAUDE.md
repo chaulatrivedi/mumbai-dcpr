@@ -24,6 +24,15 @@
 - Results panel must be print-visible
 - Project name and date must appear in PDF output
 
+## PDF Download rules
+- Every calculator must have a project name text input field
+- Every calculator must have a Download PDF button
+- PDF method: window.print() only — no external libraries
+- Print CSS must hide: Nav, Sidebar, input panel, Calculate button, Download PDF button
+- Print CSS must show: project name, date of calculation, results panel only
+- Project name and date of calculation must appear at top of PDF
+- Regulation reference line must appear at bottom of PDF
+
 ## Stack
 - React + Vite
 - No external libraries unless in DCPR_MASTER_BRIEF.md
