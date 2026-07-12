@@ -19,6 +19,13 @@
 - Push to GitHub when done
 - Never fix one bug at a time
 
+## Pre-push checklist
+Before every push Claude Code must:
+1. List every file changed
+2. Confirm the specific fix is applied in the file
+3. Confirm no other working code was touched
+4. Only then push
+
 ## Print / PDF rules
 - Nav.jsx and Sidebar.jsx must always have print:display:none
 - Results panel must be print-visible
