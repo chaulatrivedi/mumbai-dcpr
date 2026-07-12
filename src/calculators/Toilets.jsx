@@ -306,6 +306,12 @@ function Toilets() {
     padding: '3px 10px',
     borderRadius: '4px',
     display: 'inline-block',
+    marginBottom: '6px'
+  }
+
+  var nbcRefStyle = {
+    fontSize: '11px',
+    color: '#9BB5BF',
     marginBottom: '16px'
   }
 
@@ -377,7 +383,9 @@ function Toilets() {
   var daNoteStyle = {
     marginTop: '20px',
     paddingTop: '16px',
-    borderTop: '1px solid #2D5A3D'
+    borderTop: '1px solid #2D5A3D',
+    pageBreakInside: 'avoid',
+    breakInside: 'avoid'
   }
 
   var daNoteHeadingStyle = {
@@ -510,6 +518,7 @@ function Toilets() {
       return (
         <div>
           <div style={regTagStyle}>DCPR Table 13, Sr. 2</div>
+          <div style={nbcRefStyle}>NBC 2016 Part 9, Table 15</div>
           <div style={resultNumberStyle}>{result.totals.total.wc}</div>
           <div style={resultUnitStyle}>total WCs</div>
           <div style={statLineStyle}>
@@ -534,6 +543,7 @@ function Toilets() {
       return (
         <div>
           <div style={regTagStyle}>DCPR Table 13, Sr. 6</div>
+          <div style={nbcRefStyle}>NBC 2016 Part 9, Table 1</div>
           <div style={resultNumberStyle}>{result.totals.total.wc}</div>
           <div style={resultUnitStyle}>total WCs</div>
           <div style={statLineStyle}>
@@ -555,6 +565,7 @@ function Toilets() {
       return (
         <div>
           <div style={regTagStyle}>DCPR Table 13, Sr. 5</div>
+          <div style={nbcRefStyle}>NBC 2016 Part 9, Table 15</div>
           <div style={resultNumberStyle}>{result.totals.total.wc}</div>
           <div style={resultUnitStyle}>total WCs</div>
 
