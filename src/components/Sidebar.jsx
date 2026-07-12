@@ -5,33 +5,11 @@ function Sidebar() {
   var location = useLocation()
   var currentPath = location.pathname
 
-  var isPrintModeState = React.useState(false)
-  var isPrintMode = isPrintModeState[0]
-  var setIsPrintMode = isPrintModeState[1]
-
-  // Hides the sidebar when printing a calculator result to PDF (window.print()).
-  // Driven by beforeprint/afterprint state, not a CSS media-query class, to keep
-  // the locked inline-styles-only rule intact.
-  React.useEffect(function () {
-    function handleBeforePrint() {
-      setIsPrintMode(true)
-    }
-    function handleAfterPrint() {
-      setIsPrintMode(false)
-    }
-    window.addEventListener('beforeprint', handleBeforePrint)
-    window.addEventListener('afterprint', handleAfterPrint)
-    return function () {
-      window.removeEventListener('beforeprint', handleBeforePrint)
-      window.removeEventListener('afterprint', handleAfterPrint)
-    }
-  }, [])
-
   var containerStyle = {
     width: '220px',
     minWidth: '220px',
     backgroundColor: '#F5F0E8',
-    display: isPrintMode ? 'none' : 'flex',
+    display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
     padding: '16px 0',
@@ -153,34 +131,37 @@ function Sidebar() {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={listStyle}>
-        {items.map(function (item) {
-          var active = isItemActive(item)
+    <React.Fragment>
+      <style>{'@media print { .dcpr-print-hide { display: none !important; } }'}</style>
+      <div className="dcpr-print-hide" style={containerStyle}>
+        <div style={listStyle}>
+          {items.map(function (item) {
+            var active = isItemActive(item)
 
-          if (item.path === null) {
+            if (item.path === null) {
+              return (
+                <div key={item.number} style={itemBaseStyle}>
+                  <span style={numberStyle}>{item.number}</span>
+                  <span style={labelInactiveStyle}>{item.label}</span>
+                </div>
+              )
+            }
+
             return (
-              <div key={item.number} style={itemBaseStyle}>
-                <span style={numberStyle}>{item.number}</span>
-                <span style={labelInactiveStyle}>{item.label}</span>
-              </div>
+              <Link key={item.number} to={item.path} style={active ? linkActiveItemStyle : linkItemStyle}>
+                <span style={active ? numberActiveStyle : numberStyle}>{item.number}</span>
+                <span style={active ? labelActiveStyle : labelInactiveStyle}>{item.label}</span>
+              </Link>
             )
-          }
-
-          return (
-            <Link key={item.number} to={item.path} style={active ? linkActiveItemStyle : linkItemStyle}>
-              <span style={active ? numberActiveStyle : numberStyle}>{item.number}</span>
-              <span style={active ? labelActiveStyle : labelInactiveStyle}>{item.label}</span>
-            </Link>
-          )
-        })}
+          })}
+        </div>
+        <div style={aiPanelStyle}>
+          <div style={aiLabelStyle}>Ask DCPR AI</div>
+          <div style={aiSampleStyle}>"What is the parking requirement for a mixed-use plot in R2?"</div>
+          <div style={aiButtonStyle}>Ask a question &#8594;</div>
+        </div>
       </div>
-      <div style={aiPanelStyle}>
-        <div style={aiLabelStyle}>Ask DCPR AI</div>
-        <div style={aiSampleStyle}>"What is the parking requirement for a mixed-use plot in R2?"</div>
-        <div style={aiButtonStyle}>Ask a question &#8594;</div>
-      </div>
-    </div>
+    </React.Fragment>
   )
 }
 

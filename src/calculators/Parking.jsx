@@ -204,29 +204,6 @@ function Parking() {
   var calculationDate = calculationDateState[0]
   var setCalculationDate = calculationDateState[1]
 
-  var isPrintModeState = React.useState(false)
-  var isPrintMode = isPrintModeState[0]
-  var setIsPrintMode = isPrintModeState[1]
-
-  // FIX 3: toggle print-only layout via beforeprint/afterprint instead of a CSS media
-  // query class, since the locked coding rules require inline styles only, with no
-  // external CSS classes — window.matchMedia('print') has no inline-style equivalent,
-  // but these events let React state drive the same inline display:none/block toggle.
-  React.useEffect(function () {
-    function handleBeforePrint() {
-      setIsPrintMode(true)
-    }
-    function handleAfterPrint() {
-      setIsPrintMode(false)
-    }
-    window.addEventListener('beforeprint', handleBeforePrint)
-    window.addEventListener('afterprint', handleAfterPrint)
-    return function () {
-      window.removeEventListener('beforeprint', handleBeforePrint)
-      window.removeEventListener('afterprint', handleAfterPrint)
-    }
-  }, [])
-
   function handleCalculate() {
     var components = []
 
@@ -299,19 +276,6 @@ function Parking() {
 
   function handleDownloadPdf() {
     window.print()
-  }
-
-  var pageWrapStyle = {
-    display: isPrintMode ? 'none' : 'block'
-  }
-
-  var inputsWrapStyle = {
-    display: isPrintMode ? 'none' : 'block',
-    flex: 1
-  }
-
-  var downloadButtonWrapStyle = {
-    display: isPrintMode ? 'none' : 'block'
   }
 
   var headingStyle = {
@@ -590,13 +554,15 @@ function Parking() {
 
   return (
     <div>
-      <div style={pageWrapStyle}>
+      <style>{'@media print { .dcpr-print-hide { display: none !important; } }'}</style>
+
+      <div className="dcpr-print-hide">
         <div style={headingStyle}>Parking</div>
         <div style={subheadingStyle}>Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
       </div>
 
       <div style={panelRowStyle}>
-        <div style={inputsWrapStyle}>
+        <div className="dcpr-print-hide" style={{ flex: 1 }}>
           <div style={inputsPanelStyle}>
             <div style={sectionLabelStyle}>Project Name</div>
             <input style={inputStyle} type="text" value={projectName} onChange={function (e) { setProjectName(e.target.value) }} />
@@ -834,7 +800,7 @@ function Parking() {
               <div style={footerDividerStyle}></div>
               <div style={regulationLineStyle}>REGULATION: Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
 
-              <div style={downloadButtonWrapStyle}>
+              <div className="dcpr-print-hide">
                 <button type="button" style={pdfButtonStyle} onClick={handleDownloadPdf}>Download PDF</button>
               </div>
             </div>
