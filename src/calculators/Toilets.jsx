@@ -414,6 +414,12 @@ function Toilets() {
     marginBottom: '4px'
   }
 
+  var rulesAppliedLineStyle = {
+    fontSize: '11px',
+    color: '#9BB5BF',
+    marginBottom: '4px'
+  }
+
   var emptyStateStyle = {
     fontSize: '13px',
     color: '#9BB5BF',
@@ -703,6 +709,7 @@ function Toilets() {
 
               <div style={footerDividerStyle}></div>
               <div style={regulationLineStyle}>REGULATION: DCPR Reg 36, Table 13 &middot; Reg 39, Cl. 3.5 &middot; NBC 2016 Part 9</div>
+              <div style={rulesAppliedLineStyle}>Rules applied: DCPR 2034 — in force from 2018</div>
 
               <div className="dcpr-print-hide">
                 <button type="button" style={pdfButtonStyle} onClick={handleDownloadPdf}>Download PDF</button>

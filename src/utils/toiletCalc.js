@@ -1,4 +1,6 @@
-import toiletRates from '../data/toiletRates.json' with { type: 'json' }
+import toiletRatesData from '../data/toiletRates.json' with { type: 'json' }
+
+var toiletRates = toiletRatesData.rates
 
 var ZERO_FIXTURES = { wc: 0, urinal: 0, washbasin: 0, drinkingWater: 0 }
 
@@ -249,6 +251,7 @@ export function calcSchoolToilets(area, boysPercent, girlsPercent, staffPercent,
 
   return {
     typology: 'school',
+    rule_version: toiletRatesData.rule_version,
     area: area,
     totalOccupants: totalOccupants,
     staffCount: staffCount,
@@ -288,6 +291,7 @@ export function calcOfficeToilets(area, malePercent) {
 
   return {
     typology: 'office',
+    rule_version: toiletRatesData.rule_version,
     area: area,
     totalOccupants: totalOccupants,
     male: male,
@@ -337,6 +341,7 @@ export function calcRetailToilets(floors, malePercent) {
 
   return {
     typology: 'retail',
+    rule_version: toiletRatesData.rule_version,
     floors: floorResults,
     totalOccupants: totalOccupants,
     male: male,

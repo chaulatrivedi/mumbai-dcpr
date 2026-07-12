@@ -1,4 +1,6 @@
-import parkingRates from '../data/parkingRates.json' with { type: 'json' }
+import parkingRatesData from '../data/parkingRates.json' with { type: 'json' }
+
+var parkingRates = parkingRatesData.rates
 
 // Round fraction per Reg 44(2) — fractions above 0.5 round up, 0.5 and below round down
 export function roundParking(val) {
@@ -43,6 +45,7 @@ export function calcResidential(slabCounts, devType) {
   return {
     typology: 'residential',
     regulation: rates.regulation,
+    rule_version: parkingRatesData.rule_version,
     devType: devType,
     slabs: [
       { label: slabs[0].label, count: slabCounts.upto45, cars: upto45Cars, perN: slabs[0].per_n_tenements },
@@ -89,6 +92,7 @@ export function calcShopping(areaUpto20, areaAbove20) {
   return {
     typology: 'shopping_convenience',
     regulation: rates.regulation,
+    rule_version: parkingRatesData.rule_version,
     areaUpto20: areaUpto20,
     areaAbove20: areaAbove20,
     slabs: slabs,
@@ -108,6 +112,7 @@ export function calcMercantile(area) {
     return {
       typology: 'mercantile',
       regulation: rates.regulation,
+      rule_version: parkingRatesData.rule_version,
       area: area,
       nil: true,
       slabs: [],
@@ -133,6 +138,7 @@ export function calcMercantile(area) {
   return {
     typology: 'mercantile',
     regulation: rates.regulation,
+    rule_version: parkingRatesData.rule_version,
     area: area,
     nil: false,
     slabs: [
@@ -165,6 +171,7 @@ export function calcOffice(area) {
   return {
     typology: 'office',
     regulation: rates.regulation,
+    rule_version: parkingRatesData.rule_version,
     area: area,
     slabs: [
       { label: 'upto_1500sqm', area: slab1Area, cars: slab1Cars, rate: rates.slabs[0].rate },
@@ -230,6 +237,7 @@ export function calcSchool(adminArea, assemblyType, assemblyValue, canteenArea) 
   return {
     typology: 'school',
     regulation: rates.regulation,
+    rule_version: parkingRatesData.rule_version,
     admin: { area: adminArea, cars: adminCars, visitor: adminVisitor, total: totalA },
     assembly: { type: assemblyType, value: assemblyValue, cars: assemblyCars, visitor: assemblyVisitor, total: totalB },
     canteen: { area: canteenArea, nil: canteenNil, subTotal: canteenSubTotal, visitor: canteenVisitor, total: totalC },
@@ -307,6 +315,7 @@ export function calcMixedUse(components) {
 
   return {
     components: results,
+    rule_version: parkingRatesData.rule_version,
     grandTotalBase: grandTotalBase,
     visitor: visitor,
     grandTotal: totalCarParking,

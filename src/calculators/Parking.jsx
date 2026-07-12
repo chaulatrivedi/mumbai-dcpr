@@ -546,6 +546,12 @@ function Parking() {
     marginTop: '4px'
   }
 
+  var rulesAppliedLineStyle = {
+    fontSize: '11px',
+    color: '#9BB5BF',
+    marginTop: '4px'
+  }
+
   var emptyStateStyle = {
     fontSize: '13px',
     color: '#9BB5BF',
@@ -799,6 +805,7 @@ function Parking() {
 
               <div style={footerDividerStyle}></div>
               <div style={regulationLineStyle}>REGULATION: Reg 44(2)(3)(4)(5), Table 21, DCPR 2034</div>
+              <div style={rulesAppliedLineStyle}>Rules applied: DCPR 2034 — in force from 2018</div>
 
               <div className="dcpr-print-hide">
                 <button type="button" style={pdfButtonStyle} onClick={handleDownloadPdf}>Download PDF</button>
