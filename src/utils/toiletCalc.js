@@ -58,6 +58,40 @@ function getSlabValue(slab, count) {
   return 0
 }
 
+function getSlabRangeLabel(slab, count) {
+  var i
+  for (i = 0; i < slab.length; i = i + 1) {
+    if (count >= slab[i].min && count <= slab[i].max) {
+      return slab[i].min + '–' + slab[i].max
+    }
+  }
+  return ''
+}
+
+// Explanation line for a single fixture count, shown in the results panel the
+// same way urinal slab working is shown — group, fixture, formula, result.
+function buildFormulaBasis(group, fixture, count, rate) {
+  var value = Math.ceil(count / rate)
+  return {
+    group: group,
+    fixture: fixture,
+    formula: '1 per ' + rate + ' — ceil(' + count + ' ÷ ' + rate + ') = ' + value,
+    value: value
+  }
+}
+
+// Retail staff WC count under 100 persons uses NBC Table 15 slab, not a plain rate
+function buildSlabBasis(group, fixture, count, slab) {
+  var value = getSlabValue(slab, count)
+  var rangeLabel = getSlabRangeLabel(slab, count)
+  return {
+    group: group,
+    fixture: fixture,
+    formula: 'NBC Table 15 slab (' + count + ' persons, ' + rangeLabel + ' range) = ' + value,
+    value: value
+  }
+}
+
 // Urinal count — NBC Table 1 stepped slab. Base 4 fixed at 71–100, then rate-based
 // increments per bracket above 100, each increment rounded up (part thereof).
 export function getUrinalCount(maleCount) {
@@ -200,6 +234,19 @@ export function calcSchoolToilets(area, boysPercent, girlsPercent, staffPercent,
   var urinalWorking = getUrinalCount(staffMale)
   var totals = getTotalFixtures(studentBoysFixtures, studentGirlsFixtures, staffMaleFixtures, staffFemaleFixtures)
 
+  var fixtureBasis = [
+    buildFormulaBasis('Boys', 'WC', boys, toiletRates.fixtures.school_boys.wc),
+    buildFormulaBasis('Boys', 'Wash basin', boys, toiletRates.fixtures.school_boys.washbasin),
+    buildFormulaBasis('Girls', 'WC', girls, toiletRates.fixtures.school_girls.wc),
+    buildFormulaBasis('Girls', 'Wash basin', girls, toiletRates.fixtures.school_girls.washbasin)
+  ]
+  if (staffPercent > 0) {
+    fixtureBasis.push(buildFormulaBasis('Staff Male', 'WC', staffMale, toiletRates.fixtures.office_male.wc))
+    fixtureBasis.push(buildFormulaBasis('Staff Male', 'Wash basin', staffMale, toiletRates.fixtures.office_male.washbasin))
+    fixtureBasis.push(buildFormulaBasis('Staff Female', 'WC', staffFemale, toiletRates.fixtures.office_female.wc))
+    fixtureBasis.push(buildFormulaBasis('Staff Female', 'Wash basin', staffFemale, toiletRates.fixtures.office_female.washbasin))
+  }
+
   return {
     typology: 'school',
     area: area,
@@ -214,6 +261,7 @@ export function calcSchoolToilets(area, boysPercent, girlsPercent, staffPercent,
     staffFixtures: { male: staffMaleFixtures, female: staffFemaleFixtures },
     staffEntered: staffPercent > 0,
     urinalWorking: urinalWorking,
+    fixtureBasis: fixtureBasis,
     totals: totals,
     daToilet: getDAToiletNote()
   }
@@ -231,6 +279,13 @@ export function calcOfficeToilets(area, malePercent) {
   var urinalWorking = getUrinalCount(male)
   var totals = getTotalFixtures(maleFixtures, femaleFixtures, ZERO_FIXTURES, ZERO_FIXTURES)
 
+  var fixtureBasis = [
+    buildFormulaBasis('Male', 'WC', male, toiletRates.fixtures.office_male.wc),
+    buildFormulaBasis('Male', 'Wash basin', male, toiletRates.fixtures.office_male.washbasin),
+    buildFormulaBasis('Female', 'WC', female, toiletRates.fixtures.office_female.wc),
+    buildFormulaBasis('Female', 'Wash basin', female, toiletRates.fixtures.office_female.washbasin)
+  ]
+
   return {
     typology: 'office',
     area: area,
@@ -239,6 +294,7 @@ export function calcOfficeToilets(area, malePercent) {
     female: female,
     fixtures: { male: maleFixtures, female: femaleFixtures },
     urinalWorking: urinalWorking,
+    fixtureBasis: fixtureBasis,
     totals: totals,
     daToilet: getDAToiletNote()
   }
@@ -265,6 +321,20 @@ export function calcRetailToilets(floors, malePercent) {
   var urinalWorking = male > 100 ? getUrinalCount(male) : null
   var totals = getTotalFixtures(maleFixtures, femaleFixtures, ZERO_FIXTURES, ZERO_FIXTURES)
 
+  var fixtureBasis = []
+  if (male > 100) {
+    fixtureBasis.push(buildFormulaBasis('Male', 'WC', male, toiletRates.fixtures.office_male.wc))
+  } else {
+    fixtureBasis.push(buildSlabBasis('Male', 'WC', male, toiletRates.retailStaffWcSlab.male))
+  }
+  fixtureBasis.push(buildFormulaBasis('Male', 'Wash basin', male, toiletRates.fixtures.office_male.washbasin))
+  if (female > 100) {
+    fixtureBasis.push(buildFormulaBasis('Female', 'WC', female, toiletRates.fixtures.office_female.wc))
+  } else {
+    fixtureBasis.push(buildSlabBasis('Female', 'WC', female, toiletRates.retailStaffWcSlab.female))
+  }
+  fixtureBasis.push(buildFormulaBasis('Female', 'Wash basin', female, toiletRates.fixtures.office_female.washbasin))
+
   return {
     typology: 'retail',
     floors: floorResults,
@@ -273,6 +343,7 @@ export function calcRetailToilets(floors, malePercent) {
     female: female,
     fixtures: { male: maleFixtures, female: femaleFixtures },
     urinalWorking: urinalWorking,
+    fixtureBasis: fixtureBasis,
     totals: totals,
     daToilet: getDAToiletNote()
   }
