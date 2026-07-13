@@ -4,6 +4,9 @@ import Nav from './components/Nav.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Parking from './calculators/Parking.jsx'
 import Toilets from './calculators/Toilets.jsx'
+import Home from './pages/Home.jsx'
+import NewProject from './pages/NewProject.jsx'
+import ProjectDashboard from './pages/ProjectDashboard.jsx'
 
 function App() {
   var pageStyle = {
@@ -34,6 +37,9 @@ function App() {
               <Route path="/" element={<Parking />} />
               <Route path="/parking" element={<Parking />} />
               <Route path="/toilets" element={<Toilets />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/new-project" element={<NewProject />} />
+              <Route path="/project/:id" element={<ProjectDashboard />} />
             </Routes>
           </div>
         </div>

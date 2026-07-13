@@ -76,6 +76,31 @@ function Sidebar() {
     color: '#FFFFFF'
   }
 
+  var projectsLinkStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 20px',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#1E2820',
+    borderBottom: '1px solid #E2DDD5',
+    cursor: 'pointer',
+    textDecoration: 'none'
+  }
+
+  var projectsLinkActiveStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 20px',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#FFFFFF',
+    backgroundColor: '#2D5A3D',
+    borderBottom: '1px solid #E2DDD5',
+    cursor: 'pointer',
+    textDecoration: 'none'
+  }
+
   var aiPanelStyle = {
     backgroundColor: '#1E2820',
     borderRadius: '8px',
@@ -135,6 +160,9 @@ function Sidebar() {
       <style>{'@media print { .dcpr-print-hide { display: none !important; } }'}</style>
       <div className="dcpr-print-hide" style={containerStyle}>
         <div style={listStyle}>
+          <Link to="/home" style={currentPath === '/home' ? projectsLinkActiveStyle : projectsLinkStyle}>
+            Projects
+          </Link>
           {items.map(function (item) {
             var active = isItemActive(item)
 

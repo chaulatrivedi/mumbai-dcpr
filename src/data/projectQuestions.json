@@ -1,0 +1,86 @@
+{
+  "screen1": {
+    "title": "Project Details",
+    "fields": [
+      { "key": "project_name", "label": "Project name", "type": "text", "required": true },
+      { "key": "user_name", "label": "Your name", "type": "text", "required": false }
+    ]
+  },
+
+  "screen2": {
+    "title": "Base Questions",
+    "questions": [
+      { "key": "primary_use", "label": "Primary use", "type": "dropdown", "required": true, "options": ["Residential", "Commercial", "Institutional", "Mixed", "Industrial"] },
+      { "key": "use_mix", "label": "Use mix", "type": "multiselect", "required": false, "options": ["Residential", "Retail", "Commercial", "Institutional"], "showIf": { "key": "primary_use", "equals": "Mixed" } },
+      { "key": "zone", "label": "Zone", "type": "dropdown", "required": true, "options": ["R1", "R2", "C1", "C2"] },
+      { "key": "location", "label": "Location", "type": "dropdown", "required": true, "options": ["Island City", "Suburbs", "Extended Suburbs"] },
+      { "key": "plot_area_range", "label": "Plot area", "type": "dropdown", "required": true, "options": ["<300", "300-500", "500-1000", "1000-2500", "2500-5000", ">5000", "Not known"] },
+      { "key": "road_width_range", "label": "Road width", "type": "dropdown", "required": true, "options": ["<9m", "9-12m", "12-18m", "18-24m", "24-30m", ">30m", "Not known"] }
+    ]
+  },
+
+  "screen3": {
+    "title": "Development Type",
+    "key": "development_type",
+    "options": [
+      { "value": "new_development", "label": "New development (vacant plot)" },
+      { "value": "self_redevelopment", "label": "Self redevelopment (existing old building)" },
+      { "value": "33_5_mhada", "label": "33(5) — MHADA redevelopment" },
+      { "value": "33_7_cessed", "label": "33(7) — Cessed buildings (Island City)" },
+      { "value": "33_7a_dilapidated", "label": "33(7A) — Dilapidated buildings (Suburbs)" },
+      { "value": "33_9_slum", "label": "33(9) — Slum redevelopment" },
+      { "value": "33_10_sra", "label": "33(10) — SRA scheme" },
+      { "value": "not_decided", "label": "Not decided yet" }
+    ]
+  },
+
+  "branchQuestions": {
+    "new_development": [],
+    "not_decided": [],
+
+    "self_redevelopment": [
+      { "key": "existing_bua", "label": "Existing authorised BUA (sqm)", "type": "number" },
+      { "key": "existing_tenements", "label": "No. of existing tenements", "type": "number" },
+      { "key": "construction_year", "label": "Year of construction", "type": "dropdown", "options": ["Pre-1969", "Post-1969"] }
+    ],
+
+    "33_5_mhada": [
+      { "key": "existing_tenements", "label": "No. of existing tenements", "type": "number" },
+      { "key": "existing_carpet_area", "label": "Existing carpet area per tenement (sqm)", "type": "number" },
+      { "key": "plot_area_exact", "label": "Plot area under redevelopment (exact sqm)", "type": "number" },
+      { "key": "lr_rc_ratio", "label": "LR/RC ratio from ASR", "type": "text" }
+    ],
+
+    "33_7_cessed": [
+      { "key": "existing_tenements", "label": "No. of existing tenements (MBRRB certified)", "type": "number" },
+      { "key": "existing_carpet_area", "label": "Existing carpet area per tenement", "type": "number" },
+      { "key": "plot_count", "label": "No. of plots in scheme", "type": "dropdown", "options": ["1", "2-5", "6+"] },
+      { "key": "lr_rc_ratio", "label": "LR/RC ratio from ASR", "type": "text" }
+    ],
+
+    "33_7a_dilapidated": [
+      { "key": "existing_tenants", "label": "No. of existing lawful tenants", "type": "number" },
+      { "key": "existing_carpet_area", "label": "Existing carpet area per tenant", "type": "number" },
+      { "key": "plot_count", "label": "No. of plots in scheme", "type": "dropdown", "options": ["1", "2-5", "6+"] },
+      { "key": "non_tenanted_present", "label": "Non-tenanted component present?", "type": "yesno" }
+    ],
+
+    "33_9_slum": [
+      { "key": "eligible_hutment_dwellers", "label": "No. of eligible hutment dwellers", "type": "number" },
+      { "key": "commercial_slum_dwellers", "label": "No. of commercial slum dwellers", "type": "number" },
+      { "key": "land_ownership", "label": "Land ownership", "type": "dropdown", "options": ["Govt", "MCGM", "MHADA", "Private"] },
+      { "key": "net_plot_area", "label": "Net plot area after deductions (sqm)", "type": "number" },
+      { "key": "lr_rc_ratio", "label": "LR/RC ratio from ASR", "type": "text" },
+      { "key": "transit_accommodation_required", "label": "Transit accommodation required?", "type": "yesno" }
+    ],
+
+    "33_10_sra": [
+      { "key": "eligible_hutment_dwellers", "label": "No. of eligible hutment dwellers", "type": "number" },
+      { "key": "commercial_slum_dwellers", "label": "No. of commercial slum dwellers", "type": "number" },
+      { "key": "land_ownership", "label": "Land ownership", "type": "dropdown", "options": ["Govt", "MCGM", "MHADA", "Private"] },
+      { "key": "net_plot_area", "label": "Net plot area after deductions (sqm)", "type": "number" },
+      { "key": "lr_rc_ratio", "label": "LR/RC ratio from ASR", "type": "text" },
+      { "key": "min_tenement_density", "label": "Min tenement density achievable?", "type": "dropdown", "options": ["650/ha", "500/ha with CEO SRA"] }
+    ]
+  }
+}
