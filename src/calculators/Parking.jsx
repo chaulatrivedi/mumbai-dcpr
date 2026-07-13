@@ -1,5 +1,7 @@
 import React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { calcMixedUse } from '../utils/parkingCalc.js'
+import storage from '../utils/storage.js'
 
 var RESIDENTIAL_SLAB_LABELS = ['Up to 45 sq.m', '45 to 60 sq.m', '60 to 90 sq.m', 'Above 90 sq.m']
 
@@ -204,6 +206,56 @@ function Parking() {
   var calculationDate = calculationDateState[0]
   var setCalculationDate = calculationDateState[1]
 
+  var searchParamsState = useSearchParams()
+  var searchParams = searchParamsState[0]
+  var projectId = searchParams.get('projectId')
+
+  React.useEffect(function () {
+    if (!projectId) {
+      return
+    }
+
+    var project = storage.getProject(projectId)
+    if (!project) {
+      return
+    }
+
+    setProjectName(project.project_name || '')
+
+    var primaryUse = project.parameters.primary_use
+    var useMix = project.parameters.use_mix
+
+    if (primaryUse === 'Residential') {
+      setResidentialChecked(true)
+    } else if (primaryUse === 'Commercial') {
+      setOfficeChecked(true)
+    } else if (primaryUse === 'Institutional') {
+      setSchoolChecked(true)
+    } else if (primaryUse === 'Industrial') {
+      setMercantileChecked(true)
+    } else if (primaryUse === 'Mixed') {
+      if (useMix.indexOf('Residential') !== -1) {
+        setResidentialChecked(true)
+      }
+      if (useMix.indexOf('Retail') !== -1) {
+        setShoppingChecked(true)
+      }
+      if (useMix.indexOf('Commercial') !== -1) {
+        setOfficeChecked(true)
+      }
+      if (useMix.indexOf('Institutional') !== -1) {
+        setSchoolChecked(true)
+      }
+    }
+
+    var projectDevType = project.parameters.development_type
+    if (projectDevType === 'new_development') {
+      setDevType('new')
+    } else if (projectDevType && projectDevType !== 'not_decided') {
+      setDevType('redevelopment_33series')
+    }
+  }, [projectId])
+
   function handleCalculate() {
     var components = []
 
@@ -272,6 +324,10 @@ function Parking() {
     var mixedResult = calcMixedUse(components)
     setResult(mixedResult)
     setCalculationDate(new Date().toLocaleDateString())
+
+    if (projectId) {
+      storage.saveCalculationResult(projectId, 'parking', mixedResult)
+    }
   }
 
   function handleDownloadPdf() {

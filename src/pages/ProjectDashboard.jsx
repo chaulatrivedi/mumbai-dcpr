@@ -266,7 +266,7 @@ function ProjectDashboard() {
               }
 
               return (
-                <Link key={module.key} to={module.path} style={moduleLinkStyle}>
+                <Link key={module.key} to={module.path + '?projectId=' + project.project_id} style={moduleLinkStyle}>
                   {row}
                 </Link>
               )

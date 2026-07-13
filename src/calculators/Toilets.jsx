@@ -1,5 +1,7 @@
 import React from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { calcToilets } from '../utils/toiletCalc.js'
+import storage from '../utils/storage.js'
 
 function buildFixtureRows(maleObj, femaleObj) {
   return [
@@ -58,6 +60,40 @@ function Toilets() {
   var calculationDateState = React.useState('')
   var calculationDate = calculationDateState[0]
   var setCalculationDate = calculationDateState[1]
+
+  var searchParamsState = useSearchParams()
+  var searchParams = searchParamsState[0]
+  var projectId = searchParams.get('projectId')
+
+  React.useEffect(function () {
+    if (!projectId) {
+      return
+    }
+
+    var project = storage.getProject(projectId)
+    if (!project) {
+      return
+    }
+
+    setProjectName(project.project_name || '')
+
+    var primaryUse = project.parameters.primary_use
+    var useMix = project.parameters.use_mix
+
+    if (primaryUse === 'Institutional') {
+      setTypology('school')
+    } else if (primaryUse === 'Commercial') {
+      setTypology('office')
+    } else if (primaryUse === 'Mixed') {
+      if (useMix.indexOf('Retail') !== -1) {
+        setTypology('retail')
+      } else if (useMix.indexOf('Commercial') !== -1) {
+        setTypology('office')
+      } else if (useMix.indexOf('Institutional') !== -1) {
+        setTypology('school')
+      }
+    }
+  }, [projectId])
 
   function handleTypologyChange(e) {
     setTypology(e.target.value)
@@ -122,6 +158,10 @@ function Toilets() {
     var calcResult = calcToilets(typology, inputs)
     setResult(calcResult)
     setCalculationDate(new Date().toLocaleDateString())
+
+    if (projectId) {
+      storage.saveCalculationResult(projectId, 'toilets', calcResult)
+    }
   }
 
   function handleDownloadPdf() {

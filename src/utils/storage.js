@@ -29,6 +29,23 @@ var storage = {
     return project
   },
 
+  saveCalculationResult: function (projectId, calculatorName, result) {
+    var project = storage.getProject(projectId)
+    if (!project) {
+      return null
+    }
+    if (!project.calculations.hasOwnProperty(calculatorName)) {
+      return null
+    }
+    project.calculations[calculatorName] = {
+      result: result,
+      version: result && result.rule_version ? result.rule_version : null,
+      locked: true,
+      date: new Date().toISOString().slice(0, 10)
+    }
+    return storage.saveProject(project)
+  },
+
   getAllProjects: function () {
     var projects = readAll()
     var list = []
