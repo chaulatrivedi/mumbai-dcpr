@@ -1,5 +1,8 @@
 # CLAUDE.md — Mumbai DCPR Project Rules
 
+## Session setup
+`.claude/settings.json` pre-approves a scoped set of safe, read-only/build commands (`git status`, `git diff *`, `git log *`, `npm run *`, `npm install`, `npm ci`) so they don't prompt every session. No manual step needed at session start. Anything outside that list — and all destructive operations (force push, reset --hard, rm, etc.) — still requires confirmation as normal; that scope is intentional and should not be widened to a blanket bash allow without discussing the risk first.
+
 ## Read before every session
 1. Read DCPR_MASTER_BRIEF.md
 2. Read DCPR_DESIGN_BRIEF.md
