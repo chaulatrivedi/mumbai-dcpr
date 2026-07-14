@@ -206,6 +206,10 @@ function Parking() {
   var calculationDate = calculationDateState[0]
   var setCalculationDate = calculationDateState[1]
 
+  var versionsState = React.useState([])
+  var versions = versionsState[0]
+  var setVersions = versionsState[1]
+
   var searchParamsState = useSearchParams()
   var searchParams = searchParamsState[0]
   var projectId = searchParams.get('projectId')
@@ -215,48 +219,59 @@ function Parking() {
       return
     }
 
-    var project = storage.getProject(projectId)
-    if (!project) {
-      return
-    }
+    var active = true
 
-    setProjectName(project.project_name || '')
+    storage.getProject(projectId).then(function (project) {
+      if (!active || !project) {
+        return
+      }
 
-    var primaryUse = project.parameters.primary_use
-    var useMix = project.parameters.use_mix
+      setProjectName(project.project_name || '')
 
-    if (primaryUse === 'Residential') {
-      setResidentialChecked(true)
-    } else if (primaryUse === 'Commercial') {
-      setOfficeChecked(true)
-    } else if (primaryUse === 'Institutional') {
-      setSchoolChecked(true)
-    } else if (primaryUse === 'Industrial') {
-      setMercantileChecked(true)
-    } else if (primaryUse === 'Mixed') {
-      if (useMix.indexOf('Residential') !== -1) {
+      var primaryUse = project.parameters.primary_use
+      var useMix = project.parameters.use_mix
+
+      if (primaryUse === 'Residential') {
         setResidentialChecked(true)
-      }
-      if (useMix.indexOf('Retail') !== -1) {
-        setShoppingChecked(true)
-      }
-      if (useMix.indexOf('Commercial') !== -1) {
+      } else if (primaryUse === 'Commercial') {
         setOfficeChecked(true)
-      }
-      if (useMix.indexOf('Institutional') !== -1) {
+      } else if (primaryUse === 'Institutional') {
         setSchoolChecked(true)
+      } else if (primaryUse === 'Industrial') {
+        setMercantileChecked(true)
+      } else if (primaryUse === 'Mixed') {
+        if (useMix.indexOf('Residential') !== -1) {
+          setResidentialChecked(true)
+        }
+        if (useMix.indexOf('Retail') !== -1) {
+          setShoppingChecked(true)
+        }
+        if (useMix.indexOf('Commercial') !== -1) {
+          setOfficeChecked(true)
+        }
+        if (useMix.indexOf('Institutional') !== -1) {
+          setSchoolChecked(true)
+        }
       }
-    }
 
-    var projectDevType = project.parameters.development_type
-    if (projectDevType === 'new_development') {
-      setDevType('new')
-    } else if (projectDevType && projectDevType !== 'not_decided') {
-      setDevType('redevelopment_33series')
+      var projectDevType = project.parameters.development_type
+      if (projectDevType === 'new_development') {
+        setDevType('new')
+      } else if (projectDevType && projectDevType !== 'not_decided') {
+        setDevType('redevelopment_33series')
+      }
+
+      if (project.calculations && project.calculations.parking && project.calculations.parking.versions) {
+        setVersions(project.calculations.parking.versions)
+      }
+    })
+
+    return function () {
+      active = false
     }
   }, [projectId])
 
-  function handleCalculate() {
+  async function handleCalculate() {
     var components = []
 
     if (residentialChecked) {
@@ -326,8 +341,87 @@ function Parking() {
     setCalculationDate(new Date().toLocaleDateString())
 
     if (projectId) {
-      storage.saveCalculationResult(projectId, 'parking', mixedResult)
+      await storage.saveCalculationResult(projectId, 'parking', mixedResult)
     }
+  }
+
+  function buildInputsSnapshot() {
+    return {
+      residentialChecked: residentialChecked,
+      shoppingChecked: shoppingChecked,
+      mercantileChecked: mercantileChecked,
+      officeChecked: officeChecked,
+      schoolChecked: schoolChecked,
+      devType: devType,
+      upto45: upto45,
+      to60: to60,
+      to90: to90,
+      above90: above90,
+      shopAreaUpto20: shopAreaUpto20,
+      shopAreaAbove20: shopAreaAbove20,
+      mercantileArea: mercantileArea,
+      officeArea: officeArea,
+      adminArea: adminArea,
+      assemblyPresent: assemblyPresent,
+      assemblySeatType: assemblySeatType,
+      assemblySeats: assemblySeats,
+      assemblyFloorArea: assemblyFloorArea,
+      canteenPresent: canteenPresent,
+      canteenArea: canteenArea,
+      proposeTwoWheeler: proposeTwoWheeler
+    }
+  }
+
+  async function handleSaveVersion() {
+    if (!projectId || !result) {
+      return
+    }
+
+    var label = window.prompt('Version label (optional):', '')
+    if (label === null) {
+      return
+    }
+
+    var version = {
+      version_number: null,
+      label: label,
+      date: new Date().toISOString().slice(0, 10),
+      inputs: buildInputsSnapshot(),
+      result: result
+    }
+
+    var saved = await storage.saveCalculatorVersion(projectId, 'parking', version)
+    if (saved) {
+      setVersions(versions.concat([saved]))
+    }
+  }
+
+  function handleLoadVersion(version) {
+    var inputs = version.inputs
+    setResidentialChecked(inputs.residentialChecked)
+    setShoppingChecked(inputs.shoppingChecked)
+    setMercantileChecked(inputs.mercantileChecked)
+    setOfficeChecked(inputs.officeChecked)
+    setSchoolChecked(inputs.schoolChecked)
+    setDevType(inputs.devType)
+    setUpto45(inputs.upto45)
+    setTo60(inputs.to60)
+    setTo90(inputs.to90)
+    setAbove90(inputs.above90)
+    setShopAreaUpto20(inputs.shopAreaUpto20)
+    setShopAreaAbove20(inputs.shopAreaAbove20)
+    setMercantileArea(inputs.mercantileArea)
+    setOfficeArea(inputs.officeArea)
+    setAdminArea(inputs.adminArea)
+    setAssemblyPresent(inputs.assemblyPresent)
+    setAssemblySeatType(inputs.assemblySeatType)
+    setAssemblySeats(inputs.assemblySeats)
+    setAssemblyFloorArea(inputs.assemblyFloorArea)
+    setCanteenPresent(inputs.canteenPresent)
+    setCanteenArea(inputs.canteenArea)
+    setProposeTwoWheeler(inputs.proposeTwoWheeler)
+    setResult(version.result)
+    setCalculationDate(version.date)
   }
 
   function handleDownloadPdf() {
@@ -481,6 +575,74 @@ function Parking() {
     marginTop: '12px',
     cursor: 'pointer',
     fontFamily: 'system-ui'
+  }
+
+  var calcButtonRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: '10px',
+    marginTop: '16px'
+  }
+
+  var saveVersionButtonStyle = {
+    backgroundColor: '#F5F0E8',
+    color: '#1E2820',
+    fontSize: '13px',
+    fontWeight: 500,
+    padding: '8px 20px',
+    borderRadius: '6px',
+    border: '0.5px solid #E2DDD5',
+    width: '100%',
+    cursor: 'pointer',
+    fontFamily: 'system-ui'
+  }
+
+  var versionPanelStyle = {
+    backgroundColor: '#FFFFFF',
+    border: '0.5px solid #E2DDD5',
+    borderRadius: '8px',
+    padding: '16px 20px',
+    fontFamily: 'system-ui',
+    marginTop: '20px'
+  }
+
+  var versionPanelTitleStyle = {
+    fontSize: '10px',
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#787774',
+    marginBottom: '10px'
+  }
+
+  var versionRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 10px',
+    backgroundColor: '#F5F0E8',
+    border: '0.5px solid #E2DDD5',
+    borderRadius: '5px',
+    marginTop: '8px',
+    cursor: 'pointer'
+  }
+
+  var versionLabelStyle = {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#1E2820'
+  }
+
+  var versionMetaStyle = {
+    fontSize: '11px',
+    color: '#787774'
+  }
+
+  var versionEmptyStyle = {
+    fontSize: '12px',
+    color: '#787774',
+    fontStyle: 'italic'
   }
 
   var projectNameLineStyle = {
@@ -784,8 +946,31 @@ function Parking() {
               DCPR 2034, Reg 44(2), Table 21
             </div>
 
-            <button type="button" style={buttonStyle} onClick={handleCalculate}>Calculate</button>
+            <div style={calcButtonRowStyle}>
+              <button type="button" style={buttonStyle} onClick={handleCalculate}>Calculate</button>
+              {projectId ? (
+                <button type="button" style={saveVersionButtonStyle} onClick={handleSaveVersion} disabled={!result}>Save Version</button>
+              ) : null}
+            </div>
           </div>
+
+          {projectId ? (
+            <div style={versionPanelStyle}>
+              <div style={versionPanelTitleStyle}>Version History</div>
+              {versions.length === 0 ? (
+                <div style={versionEmptyStyle}>No saved versions yet.</div>
+              ) : (
+                versions.slice().reverse().map(function (version, idx) {
+                  return (
+                    <div key={idx} style={versionRowStyle} onClick={function () { handleLoadVersion(version) }}>
+                      <span style={versionLabelStyle}>v{version.version_number}{version.label ? ' — ' + version.label : ''}</span>
+                      <span style={versionMetaStyle}>{version.date}</span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          ) : null}
         </div>
 
         <div style={resultsPanelStyle}>

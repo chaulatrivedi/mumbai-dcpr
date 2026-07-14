@@ -27,7 +27,27 @@ function ProjectDashboard() {
   var params = useParams()
   var projectId = params.id
 
-  var project = storage.getProject(projectId)
+  var projectState = React.useState(null)
+  var project = projectState[0]
+  var setProject = projectState[1]
+
+  var loadingState = React.useState(true)
+  var loading = loadingState[0]
+  var setLoading = loadingState[1]
+
+  React.useEffect(function () {
+    var active = true
+    setLoading(true)
+    storage.getProject(projectId).then(function (result) {
+      if (active) {
+        setProject(result)
+        setLoading(false)
+      }
+    })
+    return function () {
+      active = false
+    }
+  }, [projectId])
 
   var headingStyle = {
     fontSize: '28px',
@@ -51,11 +71,19 @@ function ProjectDashboard() {
     fontStyle: 'italic'
   }
 
+  if (loading) {
+    return (
+      <div>
+        <div style={emptyStateStyle}>Loading project&hellip;</div>
+      </div>
+    )
+  }
+
   if (!project) {
     return (
       <div>
         <div style={headingStyle}>Project not found</div>
-        <div style={emptyStateStyle}>This project does not exist on this device. <Link to="/home">Back to Projects</Link></div>
+        <div style={emptyStateStyle}>This project does not exist. <Link to="/home">Back to Projects</Link></div>
       </div>
     )
   }

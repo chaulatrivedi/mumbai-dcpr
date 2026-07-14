@@ -96,9 +96,9 @@ function NewProject() {
       deviations: [],
 
       calculations: {
-        parking: { result: null, version: null, locked: false, date: null },
+        parking: { result: null, version: null, locked: false, date: null, versions: [] },
         fsi: { result: null, version: null, locked: false, date: null },
-        toilets: { result: null, version: null, locked: false, date: null },
+        toilets: { result: null, version: null, locked: false, date: null, versions: [] },
         refuge: { result: null, version: null, locked: false, date: null },
         staircase: { result: null, version: null, locked: false, date: null },
         openspaces: { result: null, version: null, locked: false, date: null },
@@ -111,9 +111,9 @@ function NewProject() {
     return project
   }
 
-  function handleFinish() {
+  async function handleFinish() {
     var project = buildProject()
-    storage.saveProject(project)
+    await storage.saveProject(project)
     navigate('/project/' + project.project_id)
   }
 

@@ -14,8 +14,26 @@ var DEV_TYPE_LABELS = {
 }
 
 function Home() {
-  var projectsState = React.useState(storage.getAllProjects())
+  var projectsState = React.useState([])
   var projects = projectsState[0]
+  var setProjects = projectsState[1]
+
+  var loadingState = React.useState(true)
+  var loading = loadingState[0]
+  var setLoading = loadingState[1]
+
+  React.useEffect(function () {
+    var active = true
+    storage.getAllProjects().then(function (list) {
+      if (active) {
+        setProjects(list)
+        setLoading(false)
+      }
+    })
+    return function () {
+      active = false
+    }
+  }, [])
 
   var sortedProjects = projects.slice().sort(function (a, b) {
     if (a.updated_at < b.updated_at) return 1
@@ -110,12 +128,14 @@ function Home() {
       <div style={headerRowStyle}>
         <div>
           <div style={headingStyle}>Projects</div>
-          <div style={subheadingStyle}>All projects stored on this device.</div>
+          <div style={subheadingStyle}>All projects synced to your account.</div>
         </div>
         <Link to="/new-project" style={newProjectButtonStyle}>+ New Project</Link>
       </div>
 
-      {sortedProjects.length === 0 ? (
+      {loading ? (
+        <div style={emptyStateStyle}>Loading projects&hellip;</div>
+      ) : sortedProjects.length === 0 ? (
         <div style={emptyStateStyle}>No projects yet. Click "New Project" to start one.</div>
       ) : (
         <div style={listStyle}>

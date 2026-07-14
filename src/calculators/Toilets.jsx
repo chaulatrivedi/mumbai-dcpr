@@ -61,6 +61,10 @@ function Toilets() {
   var calculationDate = calculationDateState[0]
   var setCalculationDate = calculationDateState[1]
 
+  var versionsState = React.useState([])
+  var versions = versionsState[0]
+  var setVersions = versionsState[1]
+
   var searchParamsState = useSearchParams()
   var searchParams = searchParamsState[0]
   var projectId = searchParams.get('projectId')
@@ -70,28 +74,39 @@ function Toilets() {
       return
     }
 
-    var project = storage.getProject(projectId)
-    if (!project) {
-      return
-    }
+    var active = true
 
-    setProjectName(project.project_name || '')
-
-    var primaryUse = project.parameters.primary_use
-    var useMix = project.parameters.use_mix
-
-    if (primaryUse === 'Institutional') {
-      setTypology('school')
-    } else if (primaryUse === 'Commercial') {
-      setTypology('office')
-    } else if (primaryUse === 'Mixed') {
-      if (useMix.indexOf('Retail') !== -1) {
-        setTypology('retail')
-      } else if (useMix.indexOf('Commercial') !== -1) {
-        setTypology('office')
-      } else if (useMix.indexOf('Institutional') !== -1) {
-        setTypology('school')
+    storage.getProject(projectId).then(function (project) {
+      if (!active || !project) {
+        return
       }
+
+      setProjectName(project.project_name || '')
+
+      var primaryUse = project.parameters.primary_use
+      var useMix = project.parameters.use_mix
+
+      if (primaryUse === 'Institutional') {
+        setTypology('school')
+      } else if (primaryUse === 'Commercial') {
+        setTypology('office')
+      } else if (primaryUse === 'Mixed') {
+        if (useMix.indexOf('Retail') !== -1) {
+          setTypology('retail')
+        } else if (useMix.indexOf('Commercial') !== -1) {
+          setTypology('office')
+        } else if (useMix.indexOf('Institutional') !== -1) {
+          setTypology('school')
+        }
+      }
+
+      if (project.calculations && project.calculations.toilets && project.calculations.toilets.versions) {
+        setVersions(project.calculations.toilets.versions)
+      }
+    })
+
+    return function () {
+      active = false
     }
   }, [projectId])
 
@@ -126,7 +141,7 @@ function Toilets() {
     setFloors(newFloors)
   }
 
-  function handleCalculate() {
+  async function handleCalculate() {
     var inputs = null
 
     if (typology === 'school') {
@@ -160,8 +175,84 @@ function Toilets() {
     setCalculationDate(new Date().toLocaleDateString())
 
     if (projectId) {
-      storage.saveCalculationResult(projectId, 'toilets', calcResult)
+      await storage.saveCalculationResult(projectId, 'toilets', calcResult)
     }
+  }
+
+  function buildInputsSnapshot() {
+    return {
+      typology: typology,
+      schoolArea: schoolArea,
+      boysPercent: boysPercent,
+      staffPercent: staffPercent,
+      staffMalePercent: staffMalePercent,
+      officeArea: officeArea,
+      officeMalePercent: officeMalePercent,
+      floors: floors.slice(),
+      retailMalePercent: retailMalePercent
+    }
+  }
+
+  async function handleSaveVersion() {
+    if (!projectId || !result) {
+      return
+    }
+
+    var label = window.prompt('Version label (optional):', '')
+    if (label === null) {
+      return
+    }
+
+    var version = {
+      version_number: null,
+      label: label,
+      date: new Date().toISOString().slice(0, 10),
+      typology: typology,
+      inputs: buildInputsSnapshot(),
+      result: result
+    }
+
+    var saved = await storage.saveCalculatorVersion(projectId, 'toilets', version)
+    if (saved) {
+      setVersions(versions.concat([saved]))
+    }
+  }
+
+  function handleLoadVersion(version) {
+    var inputs = version.inputs
+    setTypology(inputs.typology)
+    setSchoolArea(inputs.schoolArea)
+    setBoysPercent(inputs.boysPercent)
+    setStaffPercent(inputs.staffPercent)
+    setStaffMalePercent(inputs.staffMalePercent)
+    setOfficeArea(inputs.officeArea)
+    setOfficeMalePercent(inputs.officeMalePercent)
+    setFloors(inputs.floors.slice())
+    setRetailMalePercent(inputs.retailMalePercent)
+    setResult(version.result)
+    setCalculationDate(version.date)
+  }
+
+  function groupVersionsByTypology(list) {
+    var groups = {}
+    var order = []
+    var i
+    for (i = 0; i < list.length; i = i + 1) {
+      var t = list[i].typology
+      if (!groups.hasOwnProperty(t)) {
+        groups[t] = []
+        order.push(t)
+      }
+      groups[t].push(list[i])
+    }
+    return { groups: groups, order: order }
+  }
+
+  function typologyGroupLabel(t) {
+    if (t === 'school') return 'School / Educational'
+    if (t === 'office') return 'Office'
+    if (t === 'retail') return 'Retail / Shopping Mall'
+    return t
   }
 
   function handleDownloadPdf() {
@@ -293,6 +384,82 @@ function Toilets() {
     marginTop: '12px',
     cursor: 'pointer',
     fontFamily: 'system-ui'
+  }
+
+  var calcButtonRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    gap: '10px',
+    marginTop: '16px'
+  }
+
+  var saveVersionButtonStyle = {
+    backgroundColor: '#F5F0E8',
+    color: '#1E2820',
+    fontSize: '13px',
+    fontWeight: 500,
+    padding: '8px 20px',
+    borderRadius: '6px',
+    border: '0.5px solid #E2DDD5',
+    width: '100%',
+    cursor: 'pointer',
+    fontFamily: 'system-ui'
+  }
+
+  var versionPanelStyle = {
+    backgroundColor: '#FFFFFF',
+    border: '0.5px solid #E2DDD5',
+    borderRadius: '8px',
+    padding: '16px 20px',
+    fontFamily: 'system-ui',
+    marginTop: '20px'
+  }
+
+  var versionPanelTitleStyle = {
+    fontSize: '10px',
+    fontWeight: 500,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    color: '#787774',
+    marginBottom: '10px'
+  }
+
+  var versionGroupTitleStyle = {
+    fontSize: '11px',
+    fontWeight: 500,
+    color: '#4A7C5F',
+    marginTop: '12px',
+    marginBottom: '4px'
+  }
+
+  var versionRowStyle = {
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 10px',
+    backgroundColor: '#F5F0E8',
+    border: '0.5px solid #E2DDD5',
+    borderRadius: '5px',
+    marginTop: '8px',
+    cursor: 'pointer'
+  }
+
+  var versionLabelStyle = {
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#1E2820'
+  }
+
+  var versionMetaStyle = {
+    fontSize: '11px',
+    color: '#787774'
+  }
+
+  var versionEmptyStyle = {
+    fontSize: '12px',
+    color: '#787774',
+    fontStyle: 'italic'
   }
 
   var secondaryButtonStyle = {
@@ -645,6 +812,8 @@ function Toilets() {
     return null
   }
 
+  var groupedVersions = groupVersionsByTypology(versions)
+
   return (
     <div>
       <style>{'@media print { .dcpr-print-hide { display: none !important; } }'}</style>
@@ -735,8 +904,39 @@ function Toilets() {
               DCPR 2034, Reg 36 &amp; 39, NBC 2016 Part 9
             </div>
 
-            <button type="button" style={buttonStyle} onClick={handleCalculate}>Calculate</button>
+            <div style={calcButtonRowStyle}>
+              <button type="button" style={buttonStyle} onClick={handleCalculate}>Calculate</button>
+              {projectId ? (
+                <button type="button" style={saveVersionButtonStyle} onClick={handleSaveVersion} disabled={!result}>Save Version</button>
+              ) : null}
+            </div>
           </div>
+
+          {projectId ? (
+            <div style={versionPanelStyle}>
+              <div style={versionPanelTitleStyle}>Version History</div>
+              {versions.length === 0 ? (
+                <div style={versionEmptyStyle}>No saved versions yet.</div>
+              ) : (
+                groupedVersions.order.map(function (t) {
+                  var groupVersions = groupedVersions.groups[t]
+                  return (
+                    <div key={t}>
+                      <div style={versionGroupTitleStyle}>{typologyGroupLabel(t)}</div>
+                      {groupVersions.slice().reverse().map(function (version, idx) {
+                        return (
+                          <div key={idx} style={versionRowStyle} onClick={function () { handleLoadVersion(version) }}>
+                            <span style={versionLabelStyle}>v{version.version_number}{version.label ? ' — ' + version.label : ''}</span>
+                            <span style={versionMetaStyle}>{version.date}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+          ) : null}
         </div>
 
         <div style={resultsPanelStyle}>
